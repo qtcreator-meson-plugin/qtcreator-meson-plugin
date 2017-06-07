@@ -1,0 +1,22 @@
+{
+    \"Name\" : \"MesonProjectManager\",
+    \"Version\" : \"0.0.1\",
+    \"CompatVersion\" : \"0.0.1\",
+    \"Vendor\" : \"trilader\",
+    \"Copyright\" : \"\",
+    \"License\" : \"\",
+    \"Description\" : \"\",
+    \"Url\" : \"\",
+    $$dependencyList,
+
+\"Mimetypes\" : \"
+<?xml version=\'1.0\'?>
+<mime-info xmlns=\'http://www.freedesktop.org/standards/shared-mime-info\'>
+  <mime-type type=\'application/vnd.meson.build\'>
+    <sub-class-of type=\'text/plain\'/>
+    <comment>Meson Build file</comment>
+    <glob pattern=\'meson.build\'/>
+  </mime-type>
+</mime-info>
+\"
+}
