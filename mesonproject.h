@@ -1,6 +1,7 @@
 #pragma once
 
 #include <projectexplorer/project.h>
+#include <projectexplorer/projectnodes.h>
 //#include <projectexplorer/runconfiguration.h>
 
 #include <QStringList>
@@ -9,6 +10,14 @@
 #include <QFuture>
 
 namespace xxxMeson {
+
+class MesonProject;
+
+class MesonProjectNode: public ProjectExplorer::ProjectNode
+{
+public:
+    MesonProjectNode(MesonProject *project);
+};
 
 class MesonProject : public ProjectExplorer::Project
 {

@@ -6,6 +6,7 @@
 #include <projectexplorer/buildinfo.h>
 #include <projectexplorer/buildconfiguration.h>
 #include <projectexplorer/projectexplorerconstants.h>
+#include <projectexplorer/projectnodes.h>
 #include <coreplugin/icontext.h>
 #include "mesonbuildconfigurationfactory.h"
 #include "mesonprojectimporter.h"
@@ -19,6 +20,14 @@ MesonProject::MesonProject(const Utils::FileName &filename):
     setProjectContext(Core::Context(MESONPROJECT_ID));
     setProjectLanguages(Core::Context(ProjectExplorer::Constants::CXX_LANGUAGE_ID));
     setDisplayName(filename.toFileInfo().completeBaseName());
+
+    // Stuff stolen from genericproject::refresh
+    auto newRoot = new MesonProjectNode(this);
+
+    newRoot->addNestedNode(new ProjectExplorer::FileNode(Utils::FileName::fromString("File List"),
+                                         ProjectExplorer::FileType::Project,
+                                         /* generated = */ false));
+    setRootProjectNode(newRoot);
 }
 
 bool MesonProject::supportsKit(ProjectExplorer::Kit *k, QString *errorMessage) const
@@ -59,6 +68,11 @@ ProjectExplorer::Project::RestoreResult MesonProject::fromMap(const QVariantMap 
     if (result != RestoreResult::Ok)
         return result;
     return RestoreResult::Ok;
+}
+
+MesonProjectNode::MesonProjectNode(MesonProject *project): ProjectExplorer::ProjectNode(project->projectDirectory())
+{
+
 }
 
 }
