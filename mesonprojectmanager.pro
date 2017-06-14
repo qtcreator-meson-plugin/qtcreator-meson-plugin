@@ -8,7 +8,8 @@ SOURCES += mesonprojectmanagerplugin.cpp \
     mesonproject.cpp \
     mesonbuildconfigurationfactory.cpp \
     mesonprojectimporter.cpp \
-    mesonprojectwizard.cpp
+    mesonprojectwizard.cpp \
+    mesonprojectparser.cpp
 
 HEADERS += mesonprojectmanagerplugin.h \
         mesonprojectmanager_global.h \
@@ -17,7 +18,8 @@ HEADERS += mesonprojectmanagerplugin.h \
     constants.h \
     mesonbuildconfigurationfactory.h \
     mesonprojectimporter.h \
-    mesonprojectwizard.h
+    mesonprojectwizard.h \
+    mesonprojectparser.h
 
 # Qt Creator linking
 
