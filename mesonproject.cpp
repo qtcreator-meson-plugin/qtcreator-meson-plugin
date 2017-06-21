@@ -1,6 +1,7 @@
 #include "mesonproject.h"
 #include "constants.h"
 
+#include <QSaveFile>
 #include <memory>
 #include <projectexplorer/projectimporter.h>
 #include <projectexplorer/buildinfo.h>
@@ -13,22 +14,64 @@
 
 namespace xxxMeson {
 
+class FileListNode : public ProjectExplorer::VirtualFolderNode {
+public:
+    explicit FileListNode(MesonBuildParser::ChunkInfo *chunk, const Utils::FileName &folderPath, int priority)
+        : ProjectExplorer::VirtualFolderNode(folderPath, priority), chunk(chunk)
+    {
+    }
+
+    // FolderNode interface
+public:
+    bool addFiles(const QStringList &filePaths, QStringList *notAdded) override {
+        MesonProjectNode* projectNode = qobject_cast<MesonProjectNode*>(managingProject());
+        if(projectNode)
+        {
+
+            for(const auto &fp: filePaths)
+            {
+                auto fn = Utils::FileName::fromString(fp);
+                QString relative_fn = fn.relativeChildPath(Utils::FileName::fromString(projectNode->project->parser.getProject_base())).toString();
+                chunk->file_list.append(relative_fn);
+            }
+            //    addNestedNode(new ProjectExplorer::FileNode(Utils::FileName::fromString(fp), ProjectExplorer::FileType::Source, false));
+
+            projectNode->project->regenerateProjectFile();
+            projectNode->project->refresh();
+            return true;
+        } else {
+            return false;
+        }
+    }
+//    bool removeFiles(const QStringList &filePaths, QStringList *notRemoved) override;
+//    bool deleteFiles(const QStringList &filePaths) override;
+//    bool canRenameFile(const QString &filePath, const QString &newFilePath) override;
+//    bool renameFile(const QString &filePath, const QString &newFilePath) override;
+private:
+    MesonBuildParser::ChunkInfo *chunk;
+};
+
 MesonProject::MesonProject(const Utils::FileName &filename):
-    Project(PROFILE_MIMETYPE, filename), parser{filename.toString()}
+    Project(PROFILE_MIMETYPE, filename), filename(filename),parser{filename.toString()}
 {
     setId(MESONPROJECT_ID);
     setProjectContext(Core::Context(MESONPROJECT_ID));
     setProjectLanguages(Core::Context(ProjectExplorer::Constants::CXX_LANGUAGE_ID));
     setDisplayName(filename.toFileInfo().completeBaseName());
 
+    parser.parse();
+    refresh();
+}
+
+void MesonProject::refresh()
+{
     // Stuff stolen from genericproject::refresh
     auto root = new MesonProjectNode(this);
     root->addNode(new ProjectExplorer::FileNode(Utils::FileName::fromString(filename.toString()), ProjectExplorer::FileType::Project, false));
-    parser.parse();
 
     for(const auto &listName: parser.fileListNames())
     {
-        auto listNode = new ProjectExplorer::VirtualFolderNode(Utils::FileName::fromString(parser.getProject_base()),1);
+        auto listNode = new FileListNode(&parser.fileList(listName), Utils::FileName::fromString(parser.getProject_base()),1);
         listNode->setDisplayName(listName);
         //listNode->addFiles(parser.fileList(listName).file_list);
         for(const auto &fname: parser.fileListAbsolute(listName))
@@ -38,6 +81,16 @@ MesonProject::MesonProject(const Utils::FileName &filename):
         root->addNode(listNode);
     }
     setRootProjectNode(root);
+    emit parsingFinished();
+}
+
+void MesonProject::regenerateProjectFile()
+{
+    QByteArray out=parser.regenerate();
+    QSaveFile file(filename.toString());
+    file.open(QFile::WriteOnly);
+    file.write(out);
+    file.commit();
 }
 
 bool MesonProject::supportsKit(ProjectExplorer::Kit *k, QString *errorMessage) const
@@ -80,9 +133,19 @@ ProjectExplorer::Project::RestoreResult MesonProject::fromMap(const QVariantMap 
     return RestoreResult::Ok;
 }
 
-MesonProjectNode::MesonProjectNode(MesonProject *project): ProjectExplorer::ProjectNode(project->projectDirectory())
+MesonProjectNode::MesonProjectNode(MesonProject *project): ProjectExplorer::ProjectNode(project->projectDirectory()), project(project)
 {
 
+}
+
+bool MesonProjectNode::supportsAction(ProjectExplorer::ProjectAction action, ProjectExplorer::Node *node) const
+{
+    Q_UNUSED(node);
+    return action == ProjectExplorer::AddNewFile
+        || action == ProjectExplorer::AddExistingFile
+        || action == ProjectExplorer::AddExistingDirectory
+        || action == ProjectExplorer::RemoveFile
+        || action == ProjectExplorer::Rename;
 }
 
 }
