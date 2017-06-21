@@ -14,7 +14,7 @@
 namespace xxxMeson {
 
 MesonProject::MesonProject(const Utils::FileName &filename):
-    Project(PROFILE_MIMETYPE, filename)
+    Project(PROFILE_MIMETYPE, filename), parser{filename.toString()}
 {
     setId(MESONPROJECT_ID);
     setProjectContext(Core::Context(MESONPROJECT_ID));
@@ -22,12 +22,22 @@ MesonProject::MesonProject(const Utils::FileName &filename):
     setDisplayName(filename.toFileInfo().completeBaseName());
 
     // Stuff stolen from genericproject::refresh
-    auto newRoot = new MesonProjectNode(this);
+    auto root = new MesonProjectNode(this);
+    root->addNode(new ProjectExplorer::FileNode(Utils::FileName::fromString(filename.toString()), ProjectExplorer::FileType::Project, false));
+    parser.parse();
 
-    newRoot->addNestedNode(new ProjectExplorer::FileNode(Utils::FileName::fromString("File List"),
-                                         ProjectExplorer::FileType::Project,
-                                         /* generated = */ false));
-    setRootProjectNode(newRoot);
+    for(const auto &listName: parser.fileListNames())
+    {
+        auto listNode = new ProjectExplorer::VirtualFolderNode(Utils::FileName::fromString(parser.getProject_base()),1);
+        listNode->setDisplayName(listName);
+        //listNode->addFiles(parser.fileList(listName).file_list);
+        for(const auto &fname: parser.fileListAbsolute(listName))
+        {
+            listNode->addNestedNode(new ProjectExplorer::FileNode(Utils::FileName::fromString(fname), ProjectExplorer::FileType::Source, false));
+        }
+        root->addNode(listNode);
+    }
+    setRootProjectNode(root);
 }
 
 bool MesonProject::supportsKit(ProjectExplorer::Kit *k, QString *errorMessage) const

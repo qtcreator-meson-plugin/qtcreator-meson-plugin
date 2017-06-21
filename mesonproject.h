@@ -3,6 +3,7 @@
 #include <projectexplorer/project.h>
 #include <projectexplorer/projectnodes.h>
 //#include <projectexplorer/runconfiguration.h>
+#include "mesonprojectparser.h"
 
 #include <QStringList>
 #include <QFutureInterface>
@@ -35,6 +36,7 @@ public:
 
 protected:
     RestoreResult fromMap(const QVariantMap &map, QString *errorMessage) override;
+    MesonBuildParser parser;
 };
 
 }
