@@ -28,13 +28,17 @@ public:
     QByteArray regenerate();
 
     ChunkInfo& fileList(const QString &name);
+    QStringList fileListAbsolute(const QString &name);
     const ChunkInfo& fileList(const QString &name) const;
     bool hasFileList(const QString &name) const;
     QStringList fileListNames() const;
 
+    QString getProject_base() const;
+
 private:
     QList<ChunkInfo> chunks;
     QMap<QString, ChunkInfo*> file_lists;
+    QString project_base;
 };
 
 }

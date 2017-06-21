@@ -1,11 +1,13 @@
 #include "mesonprojectparser.h"
 #include <QFile>
 #include <QByteArray>
+#include <QFileInfo>
 
 namespace xxxMeson {
 
 MesonBuildParser::MesonBuildParser(const QString &filename): filename(filename)
 {
+    project_base=QFileInfo(filename).absolutePath();
 }
 
 void MesonBuildParser::parse()
@@ -92,6 +94,16 @@ MesonBuildParser::ChunkInfo &MesonBuildParser::fileList(const QString &name)
     return *file_lists.value(name);
 }
 
+QStringList MesonBuildParser::fileListAbsolute(const QString &name)
+{
+    QStringList result;
+    for(const auto &filename: fileList(name).file_list)
+    {
+        result.append(project_base+"/"+filename);
+    }
+    return result;
+}
+
 const MesonBuildParser::ChunkInfo &MesonBuildParser::fileList(const QString &name) const
 {
     return *file_lists.value(name);
@@ -105,6 +117,11 @@ bool MesonBuildParser::hasFileList(const QString &name) const
 QStringList MesonBuildParser::fileListNames() const
 {
     return file_lists.keys();
+}
+
+QString MesonBuildParser::getProject_base() const
+{
+    return project_base;
 }
 
 }
