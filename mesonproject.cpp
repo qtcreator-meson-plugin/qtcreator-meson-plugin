@@ -32,7 +32,8 @@ public:
             {
                 auto fn = Utils::FileName::fromString(fp);
                 QString relative_fn = fn.relativeChildPath(Utils::FileName::fromString(projectNode->project->parser.getProject_base())).toString();
-                chunk->file_list.append(relative_fn);
+                if(!chunk->file_list.contains(relative_fn))
+                    chunk->file_list.append(relative_fn);
             }
             //    addNestedNode(new ProjectExplorer::FileNode(Utils::FileName::fromString(fp), ProjectExplorer::FileType::Source, false));
 
