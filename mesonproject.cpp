@@ -8,6 +8,7 @@
 #include <projectexplorer/buildconfiguration.h>
 #include <projectexplorer/projectexplorerconstants.h>
 #include <projectexplorer/projectnodes.h>
+#include <coreplugin/documentmanager.h>
 #include <coreplugin/icontext.h>
 #include "mesonbuildconfigurationfactory.h"
 #include "mesonprojectimporter.h"
@@ -60,12 +61,12 @@ MesonProject::MesonProject(const Utils::FileName &filename):
     setProjectLanguages(Core::Context(ProjectExplorer::Constants::CXX_LANGUAGE_ID));
     setDisplayName(filename.toFileInfo().completeBaseName());
 
-    parser.parse();
     refresh();
 }
 
 void MesonProject::refresh()
 {
+    parser.parse();
     // Stuff stolen from genericproject::refresh
     auto root = new MesonProjectNode(this);
     root->addNode(new ProjectExplorer::FileNode(Utils::FileName::fromString(filename.toString()), ProjectExplorer::FileType::Project, false));
@@ -87,6 +88,7 @@ void MesonProject::refresh()
 
 void MesonProject::regenerateProjectFile()
 {
+    Core::FileChangeBlocker changeGuard(filename.toString());
     QByteArray out=parser.regenerate();
     QSaveFile file(filename.toString());
     file.open(QFile::WriteOnly);
@@ -136,7 +138,11 @@ ProjectExplorer::Project::RestoreResult MesonProject::fromMap(const QVariantMap 
 
 MesonProjectNode::MesonProjectNode(MesonProject *project): ProjectExplorer::ProjectNode(project->projectDirectory()), project(project)
 {
-
+    meson_build = new ProjectExplorer::ProjectDocument(xxxMeson::PROJECT_MIMETYPE, project->filename, [project]
+    {
+        qDebug()<<"Reload?";
+        project->refresh();
+    });
 }
 
 bool MesonProjectNode::supportsAction(ProjectExplorer::ProjectAction action, ProjectExplorer::Node *node) const

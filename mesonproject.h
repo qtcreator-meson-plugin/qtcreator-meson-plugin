@@ -24,6 +24,7 @@ public:
 public:
     bool supportsAction(ProjectExplorer::ProjectAction action, ProjectExplorer::Node *node) const override;
     MesonProject *project;
+    ProjectExplorer::ProjectDocument *meson_build;
 };
 
 class MesonProject : public ProjectExplorer::Project
@@ -44,9 +45,9 @@ public:
     void regenerateProjectFile();
     MesonBuildParser parser;
 
+    const Utils::FileName filename;
 protected:
     RestoreResult fromMap(const QVariantMap &map, QString *errorMessage) override;
-    const Utils::FileName filename;
 };
 
 }
