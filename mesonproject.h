@@ -43,7 +43,7 @@ public:
 
     void refresh();
     void regenerateProjectFile();
-    MesonBuildParser parser;
+    std::unique_ptr<MesonBuildParser> parser;
 
     const Utils::FileName filename;
 protected:

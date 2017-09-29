@@ -2,6 +2,7 @@
 #include "constants.h"
 
 #include <QSaveFile>
+#include <QDateTime>
 #include <memory>
 #include <projectexplorer/projectimporter.h>
 #include <projectexplorer/buildinfo.h>
@@ -10,6 +11,7 @@
 #include <projectexplorer/projectnodes.h>
 #include <coreplugin/documentmanager.h>
 #include <coreplugin/icontext.h>
+#include <coreplugin/icore.h>
 #include "mesonbuildconfigurationfactory.h"
 #include "mesonprojectimporter.h"
 
@@ -32,7 +34,7 @@ public:
             for(const auto &fp: filePaths)
             {
                 auto fn = Utils::FileName::fromString(fp);
-                QString relative_fn = fn.relativeChildPath(Utils::FileName::fromString(projectNode->project->parser.getProject_base())).toString();
+                QString relative_fn = fn.relativeChildPath(Utils::FileName::fromString(projectNode->project->parser->getProject_base())).toString();
                 if(!chunk->file_list.contains(relative_fn))
                     chunk->file_list.append(relative_fn);
             }
@@ -54,7 +56,7 @@ private:
 };
 
 MesonProject::MesonProject(const Utils::FileName &filename):
-    Project(PROJECT_MIMETYPE, filename), filename(filename), parser{filename.toString()}
+    Project(PROJECT_MIMETYPE, filename), filename(filename)
 {
     setId(MESONPROJECT_ID);
     setProjectContext(Core::Context(MESONPROJECT_ID));
@@ -66,17 +68,18 @@ MesonProject::MesonProject(const Utils::FileName &filename):
 
 void MesonProject::refresh()
 {
-    parser.parse();
+    parser.reset(new MesonBuildParser(filename.toString()));
+    parser->parse();
     // Stuff stolen from genericproject::refresh
     auto root = new MesonProjectNode(this);
     root->addNode(new ProjectExplorer::FileNode(Utils::FileName::fromString(filename.toString()), ProjectExplorer::FileType::Project, false));
 
-    for(const auto &listName: parser.fileListNames())
+    for(const auto &listName: parser->fileListNames())
     {
-        auto listNode = new FileListNode(&parser.fileList(listName), Utils::FileName::fromString(parser.getProject_base()),1);
+        auto listNode = new FileListNode(&parser->fileList(listName), Utils::FileName::fromString(parser->getProject_base()),1);
         listNode->setDisplayName(listName);
         //listNode->addFiles(parser.fileList(listName).file_list);
-        for(const auto &fname: parser.fileListAbsolute(listName))
+        for(const auto &fname: parser->fileListAbsolute(listName))
         {
             listNode->addNestedNode(new ProjectExplorer::FileNode(Utils::FileName::fromString(fname), ProjectExplorer::FileType::Source, false));
         }
@@ -89,11 +92,12 @@ void MesonProject::refresh()
 void MesonProject::regenerateProjectFile()
 {
     Core::FileChangeBlocker changeGuard(filename.toString());
-    QByteArray out=parser.regenerate();
-    QSaveFile file(filename.toString());
-    file.open(QFile::WriteOnly);
-    file.write(out);
-    file.commit();
+    QByteArray out=parser->regenerate();
+    Utils::FileSaver saver(filename.toString(), QIODevice::Text);
+    if(!saver.hasError()) {
+        saver.write(out);
+    }
+    saver.finalize(Core::ICore::mainWindow());
 }
 
 bool MesonProject::supportsKit(ProjectExplorer::Kit *k, QString *errorMessage) const
@@ -140,7 +144,6 @@ MesonProjectNode::MesonProjectNode(MesonProject *project): ProjectExplorer::Proj
 {
     meson_build = new ProjectExplorer::ProjectDocument(xxxMeson::PROJECT_MIMETYPE, project->filename, [project]
     {
-        qDebug()<<"Reload?";
         project->refresh();
     });
 }
