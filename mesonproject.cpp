@@ -30,7 +30,6 @@ public:
         MesonProjectNode* projectNode = qobject_cast<MesonProjectNode*>(managingProject());
         if(projectNode)
         {
-
             for(const auto &fp: filePaths)
             {
                 auto fn = Utils::FileName::fromString(fp);
@@ -47,12 +46,41 @@ public:
             return false;
         }
     }
-//    bool removeFiles(const QStringList &filePaths, QStringList *notRemoved) override;
-//    bool deleteFiles(const QStringList &filePaths) override;
+
+    bool removeFiles(const QStringList &filePaths, QStringList *notRemoved) override
+    {
+        MesonProjectNode* projectNode = qobject_cast<MesonProjectNode*>(managingProject());
+        if(projectNode)
+        {
+            for(const auto &fp: filePaths)
+            {
+                auto fn = Utils::FileName::fromString(fp);
+                QString relative_fn = fn.relativeChildPath(Utils::FileName::fromString(projectNode->project->parser->getProject_base())).toString();
+                chunk->file_list.removeOne(relative_fn);
+            }
+
+            projectNode->project->regenerateProjectFile();
+            projectNode->project->refresh();
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    bool supportsAction(ProjectExplorer::ProjectAction action, ProjectExplorer::Node *node) const override
+    {
+        Q_UNUSED(node);
+        return action == ProjectExplorer::AddNewFile
+            || action == ProjectExplorer::AddExistingFile
+            || action == ProjectExplorer::AddExistingDirectory
+            || action == ProjectExplorer::RemoveFile;
+    }
+
 //    bool canRenameFile(const QString &filePath, const QString &newFilePath) override;
 //    bool renameFile(const QString &filePath, const QString &newFilePath) override;
 private:
     MesonBuildParser::ChunkInfo *chunk;
+
 };
 
 MesonProject::MesonProject(const Utils::FileName &filename):
@@ -151,11 +179,8 @@ MesonProjectNode::MesonProjectNode(MesonProject *project): ProjectExplorer::Proj
 bool MesonProjectNode::supportsAction(ProjectExplorer::ProjectAction action, ProjectExplorer::Node *node) const
 {
     Q_UNUSED(node);
-    return action == ProjectExplorer::AddNewFile
-        || action == ProjectExplorer::AddExistingFile
-        || action == ProjectExplorer::AddExistingDirectory
-        || action == ProjectExplorer::RemoveFile
-        || action == ProjectExplorer::Rename;
+    Q_UNUSED(action);
+    return false;
 }
 
 }
