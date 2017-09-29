@@ -65,17 +65,34 @@ public:
         }
     }
 
+    bool renameFile(const QString &filePath, const QString &newFilePath) override
+    {
+        MesonProjectNode* projectNode = qobject_cast<MesonProjectNode*>(managingProject());
+        if(projectNode)
+        {
+            if(chunk->file_list.removeOne(getRelativeFileName(filePath, projectNode))) {
+                chunk->file_list.append(getRelativeFileName(newFilePath, projectNode));
+            }
+
+            projectNode->project->regenerateProjectFile();
+            projectNode->project->refresh();
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     bool supportsAction(ProjectExplorer::ProjectAction action, ProjectExplorer::Node *node) const override
     {
         Q_UNUSED(node);
         return action == ProjectExplorer::AddNewFile
             || action == ProjectExplorer::AddExistingFile
             || action == ProjectExplorer::AddExistingDirectory
-            || action == ProjectExplorer::RemoveFile;
+            || action == ProjectExplorer::RemoveFile
+            || action == ProjectExplorer::Rename;
     }
 
 //    bool canRenameFile(const QString &filePath, const QString &newFilePath) override;
-//    bool renameFile(const QString &filePath, const QString &newFilePath) override;
 private:
     QString getRelativeFileName(const QString &filePath, MesonProjectNode* projectNode)
     {
