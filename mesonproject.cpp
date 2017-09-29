@@ -32,8 +32,7 @@ public:
         {
             for(const auto &fp: filePaths)
             {
-                auto fn = Utils::FileName::fromString(fp);
-                QString relative_fn = fn.relativeChildPath(Utils::FileName::fromString(projectNode->project->parser->getProject_base())).toString();
+                QString relative_fn = getRelativeFileName(fp, projectNode);
                 if(!chunk->file_list.contains(relative_fn))
                     chunk->file_list.append(relative_fn);
             }
@@ -54,8 +53,7 @@ public:
         {
             for(const auto &fp: filePaths)
             {
-                auto fn = Utils::FileName::fromString(fp);
-                QString relative_fn = fn.relativeChildPath(Utils::FileName::fromString(projectNode->project->parser->getProject_base())).toString();
+                QString relative_fn = getRelativeFileName(fp, projectNode);
                 chunk->file_list.removeOne(relative_fn);
             }
 
@@ -79,8 +77,15 @@ public:
 //    bool canRenameFile(const QString &filePath, const QString &newFilePath) override;
 //    bool renameFile(const QString &filePath, const QString &newFilePath) override;
 private:
-    MesonBuildParser::ChunkInfo *chunk;
+    QString getRelativeFileName(const QString &filePath, MesonProjectNode* projectNode)
+    {
+        auto fn = Utils::FileName::fromString(filePath);
+        QString relative_fn = fn.relativeChildPath(Utils::FileName::fromString(projectNode->project->parser->getProject_base())).toString();
 
+        return relative_fn;
+    }
+
+    MesonBuildParser::ChunkInfo *chunk;
 };
 
 MesonProject::MesonProject(const Utils::FileName &filename):
