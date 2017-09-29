@@ -71,7 +71,7 @@ bool MesonProjectManagerPlugin::initialize(const QStringList &arguments, QString
     const Context projectContext(PROJECT_ID);
     Context projecTreeContext(ProjectExplorer::Constants::C_PROJECT_TREE);
 
-    ProjectManager::registerProjectType<MesonProject>(PROFILE_MIMETYPE);
+    ProjectManager::registerProjectType<MesonProject>(PROJECT_MIMETYPE);
 
     IWizardFactory::registerFactoryCreator([] {
         return QList<IWizardFactory *> {

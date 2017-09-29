@@ -53,7 +53,7 @@ private:
 };
 
 MesonProject::MesonProject(const Utils::FileName &filename):
-    Project(PROFILE_MIMETYPE, filename), filename(filename),parser{filename.toString()}
+    Project(PROJECT_MIMETYPE, filename), filename(filename), parser{filename.toString()}
 {
     setId(MESONPROJECT_ID);
     setProjectContext(Core::Context(MESONPROJECT_ID));
