@@ -10,6 +10,8 @@
 #include <QTimer>
 #include <QFuture>
 
+#include <cpptools/cppprojectupdater.h>
+
 namespace xxxMeson {
 
 class MesonProject;
@@ -30,6 +32,7 @@ class MesonProject : public ProjectExplorer::Project
 {
 public:
     explicit MesonProject(const Utils::FileName &proFile);
+    virtual ~MesonProject();
 
     // Project interface
 public:
@@ -45,6 +48,9 @@ public:
     std::unique_ptr<MesonBuildParser> parser;
 
     const Utils::FileName filename;
+
+    void refreshCppCodeModel();
+    CppTools::CppProjectUpdater *m_cppCodeModelUpdater = nullptr;
 protected:
     RestoreResult fromMap(const QVariantMap &map, QString *errorMessage) override;
 };

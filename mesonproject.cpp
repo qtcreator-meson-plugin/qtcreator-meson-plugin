@@ -15,6 +15,17 @@
 #include "mesonbuildconfigurationfactory.h"
 #include "mesonprojectimporter.h"
 
+#include <cpptools/cpptoolsconstants.h>
+#include <cpptools/cppmodelmanager.h>
+#include <cpptools/projectinfo.h>
+#include <cpptools/cppprojectupdater.h>
+
+#include <projectexplorer/kit.h>
+#include <projectexplorer/target.h>
+#include <projectexplorer/kitmanager.h>
+#include <projectexplorer/toolchain.h>
+#include <projectexplorer/kitinformation.h>
+
 namespace xxxMeson {
 
 class FileListNode : public ProjectExplorer::VirtualFolderNode {
@@ -106,7 +117,7 @@ private:
 };
 
 MesonProject::MesonProject(const Utils::FileName &filename):
-    Project(PROJECT_MIMETYPE, filename), filename(filename)
+    Project(PROJECT_MIMETYPE, filename), filename(filename), m_cppCodeModelUpdater(new CppTools::CppProjectUpdater(this))
 {
     setId(MESONPROJECT_ID);
     setProjectContext(Core::Context(MESONPROJECT_ID));
@@ -114,6 +125,11 @@ MesonProject::MesonProject(const Utils::FileName &filename):
     setDisplayName(filename.toFileInfo().completeBaseName());
 
     refresh();
+}
+
+MesonProject::~MesonProject()
+{
+    delete m_cppCodeModelUpdater;
 }
 
 void MesonProject::refresh()
@@ -136,7 +152,8 @@ void MesonProject::refresh()
         root->addNode(listNode);
     }
     setRootProjectNode(root);
-    emit parsingFinished();
+    refreshCppCodeModel();
+    emit parsingFinished(true);
 }
 
 void MesonProject::regenerateProjectFile()
@@ -175,6 +192,37 @@ void MesonProject::configureAsExampleProject(const QSet<Core::Id> &platforms)
 bool MesonProject::requiresTargetPanel() const
 {
     return false;
+}
+
+void MesonProject::refreshCppCodeModel()
+{
+    const ProjectExplorer::Kit *k = nullptr;
+    if (ProjectExplorer::Target *target = activeTarget())
+        k = target->kit();
+    else
+        k = ProjectExplorer::KitManager::defaultKit();
+    //QTC_ASSERT(k, return);
+
+    ProjectExplorer::ToolChain *cToolChain
+            = ProjectExplorer::ToolChainKitInformation::toolChain(k, ProjectExplorer::Constants::C_LANGUAGE_ID);
+    ProjectExplorer::ToolChain *cxxToolChain
+            = ProjectExplorer::ToolChainKitInformation::toolChain(k, ProjectExplorer::Constants::CXX_LANGUAGE_ID);
+
+    m_cppCodeModelUpdater->cancel();
+
+    CppTools::ProjectPart::QtVersion activeQtVersion = CppTools::ProjectPart::Qt5;
+
+    CppTools::RawProjectPart rpp;
+    rpp.setDisplayName(displayName());
+    rpp.setProjectFileLocation(projectFilePath().toString());
+    rpp.setQtVersion(activeQtVersion);
+    rpp.setIncludePaths({"/home/trilader/code/qtcreator-meson/testprojects/simple_project/includetest"});
+    rpp.setConfigFileName("foo");
+    rpp.setMacros({ProjectExplorer::Macro("TEST_FOO", "42")});
+    rpp.setFiles({"/home/trilader/code/qtcreator-meson/testprojects/simple_project/main.cpp"});
+
+    const CppTools::ProjectUpdateInfo projectInfoUpdate(this, cToolChain, cxxToolChain, k, {rpp});
+    m_cppCodeModelUpdater->update(projectInfoUpdate);
 }
 
 ProjectExplorer::ProjectImporter *MesonProject::projectImporter() const
