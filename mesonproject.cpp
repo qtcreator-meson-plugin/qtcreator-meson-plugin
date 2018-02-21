@@ -27,7 +27,7 @@ public:
     // FolderNode interface
 public:
     bool addFiles(const QStringList &filePaths, QStringList *notAdded) override {
-        MesonProjectNode* projectNode = qobject_cast<MesonProjectNode*>(managingProject());
+        const MesonProjectNode* projectNode = dynamic_cast<const MesonProjectNode*>(managingProject());
         if(projectNode)
         {
             for(const auto &fp: filePaths)
@@ -48,7 +48,7 @@ public:
 
     bool removeFiles(const QStringList &filePaths, QStringList *notRemoved) override
     {
-        MesonProjectNode* projectNode = qobject_cast<MesonProjectNode*>(managingProject());
+        const MesonProjectNode* projectNode = dynamic_cast<const MesonProjectNode*>(managingProject());
         if(projectNode)
         {
             for(const auto &fp: filePaths)
@@ -67,7 +67,7 @@ public:
 
     bool renameFile(const QString &filePath, const QString &newFilePath) override
     {
-        MesonProjectNode* projectNode = qobject_cast<MesonProjectNode*>(managingProject());
+        const MesonProjectNode* projectNode = dynamic_cast<const MesonProjectNode*>(managingProject());
         if(projectNode)
         {
             if(chunk->file_list.removeOne(getRelativeFileName(filePath, projectNode))) {
@@ -82,7 +82,7 @@ public:
         }
     }
 
-    bool supportsAction(ProjectExplorer::ProjectAction action, ProjectExplorer::Node *node) const override
+    bool supportsAction(ProjectExplorer::ProjectAction action, const ProjectExplorer::Node *node) const override
     {
         Q_UNUSED(node);
         return action == ProjectExplorer::AddNewFile
@@ -94,7 +94,7 @@ public:
 
 //    bool canRenameFile(const QString &filePath, const QString &newFilePath) override;
 private:
-    QString getRelativeFileName(const QString &filePath, MesonProjectNode* projectNode)
+    QString getRelativeFileName(const QString &filePath, const MesonProjectNode* projectNode)
     {
         auto fn = Utils::FileName::fromString(filePath);
         QString relative_fn = fn.relativeChildPath(Utils::FileName::fromString(projectNode->project->parser->getProject_base())).toString();
@@ -198,7 +198,7 @@ MesonProjectNode::MesonProjectNode(MesonProject *project): ProjectExplorer::Proj
     });
 }
 
-bool MesonProjectNode::supportsAction(ProjectExplorer::ProjectAction action, ProjectExplorer::Node *node) const
+bool MesonProjectNode::supportsAction(ProjectExplorer::ProjectAction action, const ProjectExplorer::Node *node) const
 {
     Q_UNUSED(node);
     Q_UNUSED(action);

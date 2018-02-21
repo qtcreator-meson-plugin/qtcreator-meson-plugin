@@ -26,7 +26,7 @@ HEADERS += mesonprojectmanagerplugin.h \
 ## Either set the IDE_SOURCE_TREE when running qmake,
 ## or set the QTC_SOURCE environment variable, to override the default setting
 isEmpty(IDE_SOURCE_TREE): IDE_SOURCE_TREE = $$(QTC_SOURCE)
-isEmpty(IDE_SOURCE_TREE): IDE_SOURCE_TREE = "/home/trilader/code/qt-creator-opensource-src-4.4.0"
+isEmpty(IDE_SOURCE_TREE): IDE_SOURCE_TREE = "/home/trilader/code/qt-creator-opensource-src-4.5.1"
 
 ## Either set the IDE_BUILD_TREE when running qmake,
 ## or set the QTC_BUILD environment variable, to override the default setting

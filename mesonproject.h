@@ -16,13 +16,12 @@ class MesonProject;
 
 class MesonProjectNode: public ProjectExplorer::ProjectNode
 {
-    Q_OBJECT
 public:
     MesonProjectNode(MesonProject *project);
 
     // Node interface
 public:
-    bool supportsAction(ProjectExplorer::ProjectAction action, ProjectExplorer::Node *node) const override;
+    bool supportsAction(ProjectExplorer::ProjectAction action, const ProjectExplorer::Node *node) const override;
     MesonProject *project;
     ProjectExplorer::ProjectDocument *meson_build;
 };
