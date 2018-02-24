@@ -47,11 +47,6 @@
 
 namespace xxxMeson {
 
-static const char *const ConfigFileTemplate =
-        "// Add predefined macros for your project here. For example:\n"
-        "// #define THE_ANSWER 42\n"
-        ;
-
 FilesSelectionWizardPage::FilesSelectionWizardPage(MesonProjectWizardDialog *mesonProjectWizard,
                                                    QWidget *parent) :
     QWizardPage(parent),
