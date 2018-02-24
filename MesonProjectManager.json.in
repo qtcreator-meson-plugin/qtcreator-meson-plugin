@@ -5,6 +5,7 @@
     \"Vendor\" : \"trilader\",
     \"Copyright\" : \"\",
     \"License\" : \"\",
+    \"Category\" : \"Build Systems\",
     \"Description\" : \"\",
     \"Url\" : \"\",
     $$dependencyList,
