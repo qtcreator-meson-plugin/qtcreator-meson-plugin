@@ -1,5 +1,6 @@
 #include "mesonprojectmanagerplugin.h"
 #include "mesonprojectmanagerconstants.h"
+#include "mesonbuildconfigurationfactory.h"
 
 #include <coreplugin/icore.h>
 #include <coreplugin/actionmanager/actionmanager.h>
@@ -78,6 +79,8 @@ bool MesonProjectManagerPlugin::initialize(const QStringList &arguments, QString
             new MesonProjectWizard
         };
     });
+
+    addAutoReleasedObject(new MesonBuildConfigurationFactory());
 
     //addAutoReleasedObject(new CustomWizardMetaFactory<CustomQmakeProjectWizard>
 //                          (QLatin1String("qmakeproject"), IWizardFactory::ProjectWizard));
