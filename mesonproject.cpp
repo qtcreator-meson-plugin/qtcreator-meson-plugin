@@ -122,7 +122,7 @@ MesonProject::MesonProject(const Utils::FileName &filename):
     setId(MESONPROJECT_ID);
     setProjectContext(Core::Context(MESONPROJECT_ID));
     setProjectLanguages(Core::Context(ProjectExplorer::Constants::CXX_LANGUAGE_ID));
-    setDisplayName(filename.toFileInfo().completeBaseName());
+    setDisplayName(this->filename.fileName(1).section("/", 0, 0));
 
     refresh();
 }
