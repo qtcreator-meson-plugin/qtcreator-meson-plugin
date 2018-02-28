@@ -28,6 +28,18 @@ public:
     ProjectExplorer::ProjectDocument *meson_build;
 };
 
+struct CompileCommandInfo
+{
+    QMap<QString, QString> defines;
+    QStringList includes;
+    QString cpp_std;
+
+    bool operator==(const CompileCommandInfo &o) const
+    {
+        return std::tie(defines, includes, cpp_std) == std::tie(o.defines, o.includes, o.cpp_std);
+    }
+};
+
 class MesonProject : public ProjectExplorer::Project
 {
     Q_OBJECT
@@ -50,11 +62,13 @@ public:
     std::unique_ptr<MesonBuildParser> parser;
 
     void mesonIntrospectProjectInfo();
+    const QHash<CompileCommandInfo, QStringList> parseCompileCommands() const;
 
     const Utils::FileName filename;
 
-    void refreshCppCodeModel();
+    void refreshCppCodeModel(const QHash<CompileCommandInfo, QStringList> &);
     CppTools::CppProjectUpdater *m_cppCodeModelUpdater = nullptr;
+
 protected:
     RestoreResult fromMap(const QVariantMap &map, QString *errorMessage) override;
 

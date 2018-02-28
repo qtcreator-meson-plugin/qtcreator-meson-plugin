@@ -1,6 +1,9 @@
 #include "mesonproject.h"
 #include "constants.h"
 
+#include <iostream>
+
+#include <QHash>
 #include <QSaveFile>
 #include <QDateTime>
 #include <memory>
@@ -29,6 +32,7 @@
 #include <utils/synchronousprocess.h>
 
 #include <QJsonDocument>
+#include <QJsonArray>
 #include <QJsonObject>
 
 namespace xxxMeson {
@@ -159,9 +163,10 @@ void MesonProject::refresh()
         root->addNode(listNode);
     }
     setRootProjectNode(root);
-    refreshCppCodeModel();
 
     mesonIntrospectProjectInfo();
+    auto codeModelInfo = parseCompileCommands();
+    refreshCppCodeModel(codeModelInfo);
 
     emit parsingFinished(true);
 }
@@ -203,6 +208,114 @@ void MesonProject::mesonIntrospectProjectInfo()
     }
 }
 
+quint64 qHash(const CompileCommandInfo &info)
+{
+    return qHash(info.includes)^qHash(info.cpp_std);
+}
+
+const QHash<CompileCommandInfo, QStringList> MesonProject::parseCompileCommands() const
+{
+    ProjectExplorer::Target *active = activeTarget();
+    if(!active)
+        return {};
+
+    ProjectExplorer::BuildConfiguration *bc = active->activeBuildConfiguration();
+    if(!bc)
+        return {};
+
+    MesonBuildConfiguration *cfg = qobject_cast<MesonBuildConfiguration*>(bc);
+    if(!cfg)
+        return {};
+
+    QHash<CompileCommandInfo, QStringList> fileCodeCompletionHints;
+
+    Utils::FileName compileCommandsFileName = cfg->buildDirectory().appendPath("compile_commands.json");
+    QFile compileCommandsFile(compileCommandsFileName.toString());
+    if(!compileCommandsFile.open(QIODevice::ReadOnly | QIODevice::Text))
+        return {};
+    QJsonArray json = QJsonDocument::fromJson(compileCommandsFile.readAll()).array();
+    for(const QJsonValue& value: json)
+    {
+        QJsonObject obj = value.toObject();
+        if(!obj.contains("directory") || !obj.contains("command") || !obj.contains("file"))
+            continue;
+        const QString dir = obj.value("directory").toString();
+        const QString cmd = obj.value("command").toString();
+        const QString file = obj.value("file").toString();
+        const QString real_file = QFileInfo(dir+"/"+file).canonicalFilePath();
+
+        QStringList parts;
+        int wstart=0, ofs=0;
+        bool in_quote=false;
+        while(ofs<cmd.size())
+        {
+            const QChar c=cmd.at(ofs);
+            if(c==' ' && !in_quote)
+            {
+                if(ofs-wstart>0)
+                    parts.append(cmd.mid(wstart, ofs-wstart));
+                ofs++;
+                wstart=ofs;
+                continue;
+            }
+            else if(c=='\'')
+            {
+                if(in_quote)
+                {
+                    in_quote=false;
+                    parts.append(cmd.mid(wstart+1, ofs-wstart-1));
+                    ofs++;
+                    wstart=ofs;
+                    continue;
+                }
+                else
+                    in_quote=true;
+            }
+            ofs++;
+        }
+
+        CompileCommandInfo info;
+        info.includes.append("/usr/include/");
+
+        for(const QString &part: parts)
+        {
+            /*
+            "c++  -Irule_system@exe -I. -I.. -I../ChaiScript-6.0.0/include -fdiagnostics-color=always
+            -pipe -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -Wnon-virtual-dtor -O0 -g -std=c++14 -pthread
+            -MMD -MQ 'rule_system@exe/main.cpp.o' -MF 'rule_system@exe/main.cpp.o.d'
+            -o 'rule_system@exe/main.cpp.o' -c ../main.cpp"
+            */
+            if(!part.startsWith("-"))
+                continue;
+
+            if(part.startsWith("-D"))
+            {
+                const QString value = part.mid(2);
+                info.defines.insert(value.section("=", 0, 1), value.section("=", 1, -1));
+            }
+            else if(part.startsWith("-U"))
+            {
+                info.defines.remove(part.mid(2));
+            }
+            else if(part.startsWith("-I"))
+            {
+                QString idir = dir+"/"+part.mid(2);
+                if(!idir.endsWith("/"))
+                    idir.append("/");
+                info.includes.append(idir);
+            }
+            else if(part.startsWith("-std"))
+            {
+                info.cpp_std = part.mid(5);
+            }
+        }
+
+        fileCodeCompletionHints[info].append(real_file);
+    }
+
+    return fileCodeCompletionHints;
+}
+
 bool MesonProject::supportsKit(ProjectExplorer::Kit *k, QString *errorMessage) const
 {
     Q_UNUSED(k)
@@ -235,7 +348,7 @@ bool MesonProject::requiresTargetPanel() const
     return false;
 }
 
-void MesonProject::refreshCppCodeModel()
+void MesonProject::refreshCppCodeModel(const QHash<CompileCommandInfo, QStringList> &fileCodeCompletionHints)
 {
     const ProjectExplorer::Kit *k = nullptr;
     if (ProjectExplorer::Target *target = activeTarget())
@@ -253,16 +366,29 @@ void MesonProject::refreshCppCodeModel()
 
     CppTools::ProjectPart::QtVersion activeQtVersion = CppTools::ProjectPart::Qt5;
 
-    CppTools::RawProjectPart rpp;
-    rpp.setDisplayName(displayName());
-    rpp.setProjectFileLocation(projectFilePath().toString());
-    rpp.setQtVersion(activeQtVersion);
-    rpp.setIncludePaths({"/home/trilader/code/qtcreator-meson/testprojects/simple_project/includetest"});
-    rpp.setConfigFileName("foo");
-    rpp.setMacros({ProjectExplorer::Macro("TEST_FOO", "42")});
-    rpp.setFiles({"/home/trilader/code/qtcreator-meson/testprojects/simple_project/main.cpp"});
+    QVector<CppTools::RawProjectPart> parts;
+    int i=1;
+    for(const CompileCommandInfo &info: fileCodeCompletionHints.keys())
+    {
+        const QStringList &files = fileCodeCompletionHints.value(info);
 
-    const CppTools::ProjectUpdateInfo projectInfoUpdate(this, cToolChain, cxxToolChain, k, {rpp});
+        CppTools::RawProjectPart rpp;
+        rpp.setDisplayName(QStringLiteral("Part #%1").arg(QString::number(i)));
+        rpp.setProjectFileLocation(projectFilePath().toString());
+        rpp.setQtVersion(activeQtVersion);
+        rpp.setIncludePaths(info.includes);
+        //rpp.setConfigFileName("???"); // TODO: This can read a file and convert the contents to macro definitions. Do we need/want this?
+        QVector<ProjectExplorer::Macro> macros;
+        for(const auto &key: info.defines.keys())
+            macros.append(ProjectExplorer::Macro(key.toUtf8(), info.defines[key].toUtf8()));
+        rpp.setMacros(macros);
+        rpp.setFiles(files);
+
+        parts.append(rpp);
+        i++;
+    }
+
+    const CppTools::ProjectUpdateInfo projectInfoUpdate(this, cToolChain, cxxToolChain, k, parts);
     m_cppCodeModelUpdater->update(projectInfoUpdate);
 }
 
