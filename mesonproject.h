@@ -46,7 +46,6 @@ public:
     bool requiresTargetPanel() const override;
     ProjectExplorer::ProjectImporter *projectImporter() const override;
 
-    void refresh();
     void regenerateProjectFile();
     std::unique_ptr<MesonBuildParser> parser;
 
@@ -56,6 +55,9 @@ public:
     CppTools::CppProjectUpdater *m_cppCodeModelUpdater = nullptr;
 protected:
     RestoreResult fromMap(const QVariantMap &map, QString *errorMessage) override;
+
+public slots:
+    void refresh();
 };
 
 }
