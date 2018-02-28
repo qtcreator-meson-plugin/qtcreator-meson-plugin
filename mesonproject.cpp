@@ -26,6 +26,11 @@
 #include <projectexplorer/toolchain.h>
 #include <projectexplorer/kitinformation.h>
 
+#include <utils/synchronousprocess.h>
+
+#include <QJsonDocument>
+#include <QJsonObject>
+
 namespace xxxMeson {
 
 class FileListNode : public ProjectExplorer::VirtualFolderNode {
@@ -124,6 +129,8 @@ MesonProject::MesonProject(const Utils::FileName &filename):
     setProjectLanguages(Core::Context(ProjectExplorer::Constants::CXX_LANGUAGE_ID));
     setDisplayName(this->filename.fileName(1).section("/", 0, 0));
 
+    connect(this, &ProjectExplorer::Project::activeTargetChanged, this, &MesonProject::refresh);
+
     refresh();
 }
 
@@ -153,6 +160,9 @@ void MesonProject::refresh()
     }
     setRootProjectNode(root);
     refreshCppCodeModel();
+
+    mesonIntrospectProjectInfo();
+
     emit parsingFinished(true);
 }
 
@@ -165,6 +175,32 @@ void MesonProject::regenerateProjectFile()
         saver.write(out);
     }
     saver.finalize(Core::ICore::mainWindow());
+}
+
+void MesonProject::mesonIntrospectProjectInfo()
+{
+    ProjectExplorer::Target *active = activeTarget();
+    if(!active)
+        return;
+
+    ProjectExplorer::BuildConfiguration *bc = active->activeBuildConfiguration();
+    if(!bc)
+        return;
+
+    MesonBuildConfiguration *cfg = qobject_cast<MesonBuildConfiguration*>(bc);
+    if(!cfg)
+        return;
+
+    Utils::SynchronousProcess proc;
+    auto response = proc.run(cfg->mesonPath(), {"introspect", cfg->buildDirectory().toString(), "--projectinfo"});
+    if(response.exitCode!=0)
+        return;
+
+    QJsonObject json = QJsonDocument::fromJson(response.allRawOutput()).object();
+    if(json.contains("name"))
+    {
+        setDisplayName(json.value("name").toString());
+    }
 }
 
 bool MesonProject::supportsKit(ProjectExplorer::Kit *k, QString *errorMessage) const

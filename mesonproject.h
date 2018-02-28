@@ -49,6 +49,8 @@ public:
     void regenerateProjectFile();
     std::unique_ptr<MesonBuildParser> parser;
 
+    void mesonIntrospectProjectInfo();
+
     const Utils::FileName filename;
 
     void refreshCppCodeModel();
