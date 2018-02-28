@@ -174,6 +174,11 @@ bool MesonProject::supportsKit(ProjectExplorer::Kit *k, QString *errorMessage) c
     return true;
 }
 
+bool MesonProject::setupTarget(ProjectExplorer::Target *t)
+{
+    return true;
+}
+
 QStringList MesonProject::filesGeneratedFrom(const QString &sourceFile) const
 {
     return {};
