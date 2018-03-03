@@ -39,6 +39,7 @@
 #include "constants.h"
 #include "mesonproject.h"
 #include "mesonprojectwizard.h"
+#include "ninjamakestep.h"
 
 using namespace xxxMeson;
 using namespace Core;
@@ -85,6 +86,7 @@ bool MesonProjectManagerPlugin::initialize(const QStringList &arguments, QString
     });
 
     addAutoReleasedObject(new MesonBuildConfigurationFactory());
+    addAutoReleasedObject(new NinjaMakeStepFactory());
 
     //addAutoReleasedObject(new CustomWizardMetaFactory<CustomQmakeProjectWizard>
 //                          (QLatin1String("qmakeproject"), IWizardFactory::ProjectWizard));
