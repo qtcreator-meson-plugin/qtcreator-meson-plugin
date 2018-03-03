@@ -16,16 +16,57 @@ namespace xxxMeson {
 
 class MesonProject;
 
+class MesonProjectPartManager
+{
+public:
+    MesonProjectPartManager(ProjectExplorer::FolderNode *node, MesonProject *project, const Utils::FileName &filename);
+
+public:
+    void regenerateProjectFiles();
+
+    MesonProject *project = nullptr;
+    ProjectExplorer::ProjectDocument *meson_build = nullptr;
+    std::unique_ptr<MesonBuildParser> parser;
+};
+
+
 class MesonProjectNode: public ProjectExplorer::ProjectNode
 {
 public:
-    MesonProjectNode(MesonProject *project);
+    MesonProjectNode(MesonProject *project, const Utils::FileName &filename);
 
     // Node interface
 public:
     bool supportsAction(ProjectExplorer::ProjectAction action, const ProjectExplorer::Node *node) const override;
-    MesonProject *project;
-    ProjectExplorer::ProjectDocument *meson_build;
+
+    MesonProjectPartManager partMgr;
+};
+
+class MesonFileNode: public ProjectExplorer::FolderNode
+{
+public:
+    MesonFileNode(MesonProject *project, const Utils::FileName &filename);
+
+public:
+    bool supportsAction(ProjectExplorer::ProjectAction action, const ProjectExplorer::Node *node) const override;
+
+    MesonProjectPartManager partMgr;
+};
+
+class MesonFileSubFolderNode: public ProjectExplorer::FolderNode
+{
+public:
+    MesonFileSubFolderNode(const Utils::FileName &filename);
+
+public:
+    bool addFiles(const QStringList &filePaths, QStringList *notAdded) override;
+    bool removeFiles(const QStringList &filePaths, QStringList *notRemoved) override;
+    bool renameFile(const QString &filePath, const QString &newFilePath) override;
+
+    bool supportsAction(ProjectExplorer::ProjectAction action, const ProjectExplorer::Node *node) const override;
+
+private:
+    ProjectExplorer::FolderNode *getFileListNode() const;
 };
 
 struct CompileCommandInfo
@@ -58,8 +99,6 @@ public:
     bool requiresTargetPanel() const override;
     ProjectExplorer::ProjectImporter *projectImporter() const override;
 
-    void regenerateProjectFile();
-    std::unique_ptr<MesonBuildParser> parser;
 
     void mesonIntrospectProjectInfo();
     const QHash<CompileCommandInfo, QStringList> parseCompileCommands() const;
