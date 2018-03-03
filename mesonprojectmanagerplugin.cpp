@@ -8,6 +8,7 @@
 #include <coreplugin/actionmanager/command.h>
 #include <coreplugin/editormanager/editormanager.h>
 #include <coreplugin/editormanager/ieditor.h>
+#include <coreplugin/fileiconprovider.h>
 
 #include <projectexplorer/buildmanager.h>
 #include <projectexplorer/session.h>
@@ -71,6 +72,9 @@ bool MesonProjectManagerPlugin::initialize(const QStringList &arguments, QString
 
     const Context projectContext(PROJECT_ID);
     Context projecTreeContext(ProjectExplorer::Constants::C_PROJECT_TREE);
+
+    Core::FileIconProvider::registerIconOverlayForFilename(":/projectexplorer/images/projectexplorer.png", "meson.build");
+    Core::FileIconProvider::registerIconOverlayForFilename(":/projectexplorer/images/projectexplorer.png", "meson_options.txt");
 
     ProjectManager::registerProjectType<MesonProject>(PROJECT_MIMETYPE);
 

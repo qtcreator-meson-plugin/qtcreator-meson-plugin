@@ -15,6 +15,7 @@
 #include <coreplugin/documentmanager.h>
 #include <coreplugin/icontext.h>
 #include <coreplugin/icore.h>
+#include <coreplugin/fileiconprovider.h>
 #include "mesonbuildconfigurationfactory.h"
 #include "mesonprojectimporter.h"
 
@@ -187,6 +188,7 @@ void MesonProject::mesonIntrospectBuildsytemFiles(MesonProjectNode *root)
             if (!subprojects) {
                 Utils::FileName fnSubprojects = Utils::FileName::fromString(filename.parentDir().appendPath("subprojects").toString());
                 subprojects = new ProjectExplorer::FolderNode(fnSubprojects, ProjectExplorer::NodeType::Folder, "subprojects");
+                subprojects->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_qt.png"));
                 root->addNode(subprojects);
             }
             baseNode = subprojects;
@@ -200,6 +202,7 @@ void MesonProject::mesonIntrospectBuildsytemFiles(MesonProjectNode *root)
             baseNode->addNestedNode(new ProjectExplorer::FileNode(fn, ProjectExplorer::FileType::Project, false),
             {}, [](const Utils::FileName &fn) {
                 ProjectExplorer::FolderNode *node = new ProjectExplorer::FolderNode(fn);
+                //node->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_ui.png"));
                 return node;
             });
         }
@@ -458,12 +461,14 @@ MesonProjectPartManager::MesonProjectPartManager(ProjectExplorer::FolderNode *no
     for(const auto &listName: parser->fileListNames())
     {
         auto listNode = new FileListNode(this, &parser->fileList(listName), Utils::FileName::fromString(parser->getProject_base()),1);
+        listNode->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_ui.png"));
         listNode->setDisplayName(listName);
         for(const auto &fname: parser->fileListAbsolute(listName))
         {
             listNode->addNestedNode(new ProjectExplorer::FileNode(Utils::FileName::fromString(fname), ProjectExplorer::FileType::Source, false),
             {}, [](const Utils::FileName &fn) {
                 ProjectExplorer::FolderNode *node = new MesonFileSubFolderNode(fn);
+                node->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_ui.png"));
                 return node;
             });
         }
