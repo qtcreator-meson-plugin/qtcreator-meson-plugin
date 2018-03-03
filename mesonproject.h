@@ -99,6 +99,7 @@ public:
     bool requiresTargetPanel() const override;
     ProjectExplorer::ProjectImporter *projectImporter() const override;
 
+    void mesonIntrospectBuildsytemFiles(MesonProjectNode *root);
 
     void mesonIntrospectProjectInfo();
     const QHash<CompileCommandInfo, QStringList> parseCompileCommands() const;

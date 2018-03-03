@@ -132,6 +132,7 @@ void MesonProject::refresh()
     // Stuff stolen from genericproject::refresh
     auto root = new MesonProjectNode(this, filename);
 
+    mesonIntrospectBuildsytemFiles(root);
 
     setRootProjectNode(root);
 
@@ -151,6 +152,58 @@ void MesonProjectPartManager::regenerateProjectFiles()
         saver.write(out);
     }
     saver.finalize(Core::ICore::mainWindow());
+}
+
+void MesonProject::mesonIntrospectBuildsytemFiles(MesonProjectNode *root)
+{
+    ProjectExplorer::Target *active = activeTarget();
+    if(!active)
+        return;
+
+    ProjectExplorer::BuildConfiguration *bc = active->activeBuildConfiguration();
+    if(!bc)
+        return;
+
+    MesonBuildConfiguration *cfg = qobject_cast<MesonBuildConfiguration*>(bc);
+    if(!cfg)
+        return;
+
+    Utils::SynchronousProcess proc;
+    auto response = proc.run(cfg->mesonPath(), {"introspect", cfg->buildDirectory().toString(), "--buildsystem-files"});
+    if(response.exitCode!=0)
+        return;
+
+    ProjectExplorer::FolderNode *subprojects = nullptr;
+
+    QJsonArray json = QJsonDocument::fromJson(response.allRawOutput()).array();
+    for (QJsonValue v: json) {
+        QString file = v.toString();
+        if (file == "meson.build") continue;
+
+        ProjectExplorer::FolderNode *baseNode = root;
+        Utils::FileName fn = Utils::FileName::fromString(filename.parentDir().appendPath(file).toString());
+
+        if (file.startsWith("subprojects/")) {
+            if (!subprojects) {
+                Utils::FileName fnSubprojects = Utils::FileName::fromString(filename.parentDir().appendPath("subprojects").toString());
+                subprojects = new ProjectExplorer::FolderNode(fnSubprojects, ProjectExplorer::NodeType::Folder, "subprojects");
+                root->addNode(subprojects);
+            }
+            baseNode = subprojects;
+        }
+
+        if (file.endsWith("/meson.build")) {
+            auto mfn = new MesonFileNode(this, fn);
+            mfn->setDisplayName(file.mid(0, file.size() - 12));
+            baseNode->addNode(mfn);
+        } else {
+            baseNode->addNestedNode(new ProjectExplorer::FileNode(fn, ProjectExplorer::FileType::Project, false),
+            {}, [](const Utils::FileName &fn) {
+                ProjectExplorer::FolderNode *node = new ProjectExplorer::FolderNode(fn);
+                return node;
+            });
+        }
+    }
 }
 
 void MesonProject::mesonIntrospectProjectInfo()
