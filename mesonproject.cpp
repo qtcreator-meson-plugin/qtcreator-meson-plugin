@@ -476,10 +476,6 @@ MesonProjectPartManager::MesonProjectPartManager(ProjectExplorer::FolderNode *no
     }
 }
 
-MesonProjectPartManager::~MesonProjectPartManager()
-{
-}
-
 MesonFileNode::MesonFileNode(MesonProject *project, const Utils::FileName &filename)
     : ProjectExplorer::FolderNode(filename.parentDir()),
       partMgr(this, project, filename)
