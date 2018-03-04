@@ -130,6 +130,12 @@ MesonProject::~MesonProject()
 
 void MesonProject::refresh()
 {
+    if (isParsing()) {
+        // file change handling is racy and actually calls refresh even on expected changes :/
+        return;
+    }
+    emitParsingStarted();
+    std::cerr << "refreshing\n";
     // Stuff stolen from genericproject::refresh
     auto root = new MesonProjectNode(this, filename);
 
@@ -141,7 +147,7 @@ void MesonProject::refresh()
     auto codeModelInfo = parseCompileCommands();
     refreshCppCodeModel(codeModelInfo);
 
-    emit parsingFinished(true);
+    emitParsingFinished(true);
 }
 
 void MesonProjectPartManager::regenerateProjectFiles()
