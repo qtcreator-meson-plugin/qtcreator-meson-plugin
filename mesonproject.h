@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include <projectexplorer/project.h>
 #include <projectexplorer/projectnodes.h>
 //#include <projectexplorer/runconfiguration.h>
@@ -25,7 +27,7 @@ public:
     void regenerateProjectFiles();
 
     MesonProject *project = nullptr;
-    ProjectExplorer::ProjectDocument *meson_build = nullptr;
+    std::unique_ptr<ProjectExplorer::ProjectDocument> meson_build;
     std::unique_ptr<MesonBuildParser> parser;
 };
 
