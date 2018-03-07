@@ -29,6 +29,8 @@
 #include <projectexplorer/kitmanager.h>
 #include <projectexplorer/toolchain.h>
 #include <projectexplorer/kitinformation.h>
+#include <projectexplorer/task.h>
+#include <projectexplorer/taskhub.h>
 
 #include <utils/synchronousprocess.h>
 
@@ -178,7 +180,12 @@ void MesonProject::mesonIntrospectBuildsytemFiles(MesonProjectNode *root)
     Utils::SynchronousProcess proc;
     auto response = proc.run(cfg->mesonPath(), {"introspect", cfg->buildDirectory().toString(), "--buildsystem-files"});
     if(response.exitCode!=0)
+    {
+        ProjectExplorer::TaskHub::addTask(ProjectExplorer::Task::Error,
+                                          QStringLiteral("Can't introspect buildsystem-files list. rc=%1").arg(QString::number(response.exitCode)),
+                                          ProjectExplorer::Constants::TASK_CATEGORY_BUILDSYSTEM);
         return;
+    }
 
     ProjectExplorer::FolderNode *subprojects = nullptr;
 
@@ -235,7 +242,12 @@ void MesonProject::mesonIntrospectProjectInfo()
     Utils::SynchronousProcess proc;
     auto response = proc.run(cfg->mesonPath(), {"introspect", cfg->buildDirectory().toString(), "--projectinfo"});
     if(response.exitCode!=0)
+    {
+        ProjectExplorer::TaskHub::addTask(ProjectExplorer::Task::Error,
+                                          QStringLiteral("Can't introspect projectinfo. rc=%1").arg(QString::number(response.exitCode)),
+                                          ProjectExplorer::Constants::TASK_CATEGORY_BUILDSYSTEM);
         return;
+    }
 
     QJsonObject json = QJsonDocument::fromJson(response.allRawOutput()).object();
     if(json.contains("name"))
