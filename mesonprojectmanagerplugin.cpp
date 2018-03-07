@@ -1,5 +1,4 @@
 #include "mesonprojectmanagerplugin.h"
-#include "mesonprojectmanagerconstants.h"
 #include "mesonbuildconfigurationfactory.h"
 
 #include <coreplugin/icore.h>

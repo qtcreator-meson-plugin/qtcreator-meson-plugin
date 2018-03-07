@@ -15,7 +15,6 @@ SOURCES += mesonprojectmanagerplugin.cpp \
 
 HEADERS += mesonprojectmanagerplugin.h \
         mesonprojectmanager_global.h \
-        mesonprojectmanagerconstants.h \
     mesonproject.h \
     mesonbuildconfigurationfactory.h \
     mesonprojectimporter.h \

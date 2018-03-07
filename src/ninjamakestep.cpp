@@ -14,12 +14,6 @@
 
 namespace MesonProjectManager {
 
-const char NINJA_MS_ID[] = "MesonProjectManager.NinjaMakeStep";
-
-const char BUILD_TARGETS_KEY[] = "MesonProjectManager.NinjaMakeStep.BuildTargets";
-const char NINJA_ARGUMENTS_KEY[] = "MesonProjectManager.NinjaMakeStep.NinjaArguments";
-const char NINJA_COMMAND_KEY[] = "MesonProjectManager.NinjaMakeStep.NinjaCommand";
-
 NinjaMakeStep::NinjaMakeStep(ProjectExplorer::BuildStepList *parent)
     : AbstractProcessStep(parent, Core::Id(NINJA_MS_ID))
 {

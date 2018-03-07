@@ -1,4 +1,9 @@
 #include "mesonbuildconfigurationfactory.h"
+
+#include "src/constants.h"
+#include "src/ninjamakestep.h"
+#include "mesonproject.h"
+
 #include <projectexplorer/buildconfiguration.h>
 #include <projectexplorer/target.h>
 #include <projectexplorer/project.h>
@@ -8,14 +13,8 @@
 #include <qtsupport/qtkitinformation.h>
 #include <utils/qtcassert.h>
 
-#include "mesonproject.h"
-#include "src/ninjamakestep.h"
-
 #include <QDebug>
 #include <QWidget>
-
-const char MESON_BC_ID[] = "MesonProjectManager.MesonBuildConfiguration";
-const char MESON_BC_MESON_PATH[] = "MesonProjectManager.MesonBuildConfiguration.MesonPath";
 
 MesonProjectManager::MesonBuildConfiguration::MesonBuildConfiguration(ProjectExplorer::Target *parent)
     : BuildConfiguration(parent, Core::Id(MESON_BC_ID)){
