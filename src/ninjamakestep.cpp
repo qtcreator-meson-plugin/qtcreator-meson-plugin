@@ -1,6 +1,6 @@
 #include "ninjamakestep.h"
 #include "ninjamakestepconfigwidget.h"
-#include "../constants.h"
+#include "constants.h"
 
 #include <projectexplorer/buildsteplist.h>
 #include <projectexplorer/buildconfiguration.h>

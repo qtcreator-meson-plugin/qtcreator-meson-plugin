@@ -36,7 +36,7 @@
 #include <QMainWindow>
 #include <QMenu>
 
-#include "constants.h"
+#include "src/constants.h"
 #include "mesonproject.h"
 #include "mesonprojectwizard.h"
 #include "src/ninjamakestep.h"

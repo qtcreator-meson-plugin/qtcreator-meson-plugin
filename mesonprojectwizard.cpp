@@ -43,7 +43,7 @@
 #include <QStyle>
 #include <QVBoxLayout>
 
-#include "constants.h"
+#include "src/constants.h"
 
 namespace MesonProjectManager {
 

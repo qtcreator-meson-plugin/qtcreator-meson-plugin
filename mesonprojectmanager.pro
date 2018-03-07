@@ -17,13 +17,13 @@ HEADERS += mesonprojectmanagerplugin.h \
         mesonprojectmanager_global.h \
         mesonprojectmanagerconstants.h \
     mesonproject.h \
-    constants.h \
     mesonbuildconfigurationfactory.h \
     mesonprojectimporter.h \
     mesonprojectwizard.h \
     mesonprojectparser.h \
     src/ninjamakestep.h \
-    src/ninjamakestepconfigwidget.h
+    src/ninjamakestepconfigwidget.h \
+    src/constants.h
 
 # Qt Creator linking
 
