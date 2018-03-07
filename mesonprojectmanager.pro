@@ -14,7 +14,6 @@ SOURCES += mesonprojectmanagerplugin.cpp \
     src/ninjamakestepconfigwidget.cpp
 
 HEADERS += mesonprojectmanagerplugin.h \
-        mesonprojectmanager_global.h \
     mesonproject.h \
     mesonbuildconfigurationfactory.h \
     mesonprojectimporter.h \

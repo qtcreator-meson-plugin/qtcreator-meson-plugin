@@ -1,7 +1,5 @@
 #pragma once
 
-#include "mesonprojectmanager_global.h"
-
 #include <extensionsystem/iplugin.h>
 
 namespace MesonProjectManager {
