@@ -15,6 +15,7 @@
 #include <coreplugin/documentmanager.h>
 #include <coreplugin/icontext.h>
 #include <coreplugin/icore.h>
+#include <coreplugin/fileiconprovider.h>
 #include "mesonbuildconfigurationfactory.h"
 #include "mesonprojectimporter.h"
 
@@ -39,67 +40,50 @@ namespace xxxMeson {
 
 class FileListNode : public ProjectExplorer::VirtualFolderNode {
 public:
-    explicit FileListNode(MesonBuildParser::ChunkInfo *chunk, const Utils::FileName &folderPath, int priority)
-        : ProjectExplorer::VirtualFolderNode(folderPath, priority), chunk(chunk)
+    explicit FileListNode(MesonProjectPartManager* projectPartManager, MesonBuildParser::ChunkInfo *chunk, const Utils::FileName &folderPath, int priority)
+        : ProjectExplorer::VirtualFolderNode(folderPath, priority), projectPartManager(projectPartManager), chunk(chunk)
     {
     }
 
     // FolderNode interface
 public:
     bool addFiles(const QStringList &filePaths, QStringList *notAdded) override {
-        const MesonProjectNode* projectNode = dynamic_cast<const MesonProjectNode*>(managingProject());
-        if(projectNode)
+        for(const auto &fp: filePaths)
         {
-            for(const auto &fp: filePaths)
-            {
-                QString relative_fn = getRelativeFileName(fp, projectNode);
-                if(!chunk->file_list.contains(relative_fn))
-                    chunk->file_list.append(relative_fn);
-            }
-            //    addNestedNode(new ProjectExplorer::FileNode(Utils::FileName::fromString(fp), ProjectExplorer::FileType::Source, false));
-
-            projectNode->project->regenerateProjectFile();
-            projectNode->project->refresh();
-            return true;
-        } else {
-            return false;
+            QString relative_fn = getRelativeFileName(fp);
+            if(!chunk->file_list.contains(relative_fn))
+                chunk->file_list.append(relative_fn);
         }
+        //    addNestedNode(new ProjectExplorer::FileNode(Utils::FileName::fromString(fp), ProjectExplorer::FileType::Source, false));
+
+        projectPartManager->regenerateProjectFiles();
+        projectPartManager->project->refresh();
+        return true;
     }
 
     bool removeFiles(const QStringList &filePaths, QStringList *notRemoved) override
     {
-        const MesonProjectNode* projectNode = dynamic_cast<const MesonProjectNode*>(managingProject());
-        if(projectNode)
+        for(const auto &fp: filePaths)
         {
-            for(const auto &fp: filePaths)
-            {
-                QString relative_fn = getRelativeFileName(fp, projectNode);
-                chunk->file_list.removeOne(relative_fn);
-            }
-
-            projectNode->project->regenerateProjectFile();
-            projectNode->project->refresh();
-            return true;
-        } else {
-            return false;
+            QString relative_fn = getRelativeFileName(fp);
+            chunk->file_list.removeOne(relative_fn);
         }
+
+        projectPartManager->regenerateProjectFiles();
+        projectPartManager->project->refresh();
+        return true;
     }
 
     bool renameFile(const QString &filePath, const QString &newFilePath) override
     {
-        const MesonProjectNode* projectNode = dynamic_cast<const MesonProjectNode*>(managingProject());
-        if(projectNode)
-        {
-            if(chunk->file_list.removeOne(getRelativeFileName(filePath, projectNode))) {
-                chunk->file_list.append(getRelativeFileName(newFilePath, projectNode));
-            }
-
-            projectNode->project->regenerateProjectFile();
-            projectNode->project->refresh();
-            return true;
-        } else {
-            return false;
+        // TODO this needs to be global across the whole project (all file lists of all meson files)
+        if(chunk->file_list.removeOne(getRelativeFileName(filePath))) {
+            chunk->file_list.append(getRelativeFileName(newFilePath));
         }
+
+        projectPartManager->regenerateProjectFiles();
+        projectPartManager->project->refresh();
+        return true;
     }
 
     bool supportsAction(ProjectExplorer::ProjectAction action, const ProjectExplorer::Node *node) const override
@@ -114,15 +98,16 @@ public:
 
 //    bool canRenameFile(const QString &filePath, const QString &newFilePath) override;
 private:
-    QString getRelativeFileName(const QString &filePath, const MesonProjectNode* projectNode)
+    QString getRelativeFileName(const QString &filePath)
     {
         auto fn = Utils::FileName::fromString(filePath);
-        QString relative_fn = fn.relativeChildPath(Utils::FileName::fromString(projectNode->project->parser->getProject_base())).toString();
+        QString relative_fn = fn.relativeChildPath(Utils::FileName::fromString(projectPartManager->parser->getProject_base())).toString();
 
         return relative_fn;
     }
 
-    MesonBuildParser::ChunkInfo *chunk;
+    MesonProjectPartManager* projectPartManager = nullptr;
+    MesonBuildParser::ChunkInfo *chunk = nullptr;
 };
 
 MesonProject::MesonProject(const Utils::FileName &filename):
@@ -145,41 +130,89 @@ MesonProject::~MesonProject()
 
 void MesonProject::refresh()
 {
-    parser.reset(new MesonBuildParser(filename.toString()));
-    parser->parse();
-    // Stuff stolen from genericproject::refresh
-    auto root = new MesonProjectNode(this);
-    root->addNode(new ProjectExplorer::FileNode(Utils::FileName::fromString(filename.toString()), ProjectExplorer::FileType::Project, false));
-
-    for(const auto &listName: parser->fileListNames())
-    {
-        auto listNode = new FileListNode(&parser->fileList(listName), Utils::FileName::fromString(parser->getProject_base()),1);
-        listNode->setDisplayName(listName);
-        //listNode->addFiles(parser.fileList(listName).file_list);
-        for(const auto &fname: parser->fileListAbsolute(listName))
-        {
-            listNode->addNestedNode(new ProjectExplorer::FileNode(Utils::FileName::fromString(fname), ProjectExplorer::FileType::Source, false));
-        }
-        root->addNode(listNode);
+    if (isParsing()) {
+        // file change handling is racy and actually calls refresh even on expected changes :/
+        return;
     }
+    emitParsingStarted();
+    std::cerr << "refreshing\n";
+    // Stuff stolen from genericproject::refresh
+    auto root = new MesonProjectNode(this, filename);
+
+    mesonIntrospectBuildsytemFiles(root);
+
     setRootProjectNode(root);
 
     mesonIntrospectProjectInfo();
     auto codeModelInfo = parseCompileCommands();
     refreshCppCodeModel(codeModelInfo);
 
-    emit parsingFinished(true);
+    emitParsingFinished(true);
 }
 
-void MesonProject::regenerateProjectFile()
+void MesonProjectPartManager::regenerateProjectFiles()
 {
-    Core::FileChangeBlocker changeGuard(filename.toString());
+    Core::FileChangeBlocker changeGuard(parser->filename);
     QByteArray out=parser->regenerate();
-    Utils::FileSaver saver(filename.toString(), QIODevice::Text);
+    Utils::FileSaver saver(parser->filename, QIODevice::Text);
     if(!saver.hasError()) {
         saver.write(out);
     }
     saver.finalize(Core::ICore::mainWindow());
+}
+
+void MesonProject::mesonIntrospectBuildsytemFiles(MesonProjectNode *root)
+{
+    ProjectExplorer::Target *active = activeTarget();
+    if(!active)
+        return;
+
+    ProjectExplorer::BuildConfiguration *bc = active->activeBuildConfiguration();
+    if(!bc)
+        return;
+
+    MesonBuildConfiguration *cfg = qobject_cast<MesonBuildConfiguration*>(bc);
+    if(!cfg)
+        return;
+
+    Utils::SynchronousProcess proc;
+    auto response = proc.run(cfg->mesonPath(), {"introspect", cfg->buildDirectory().toString(), "--buildsystem-files"});
+    if(response.exitCode!=0)
+        return;
+
+    ProjectExplorer::FolderNode *subprojects = nullptr;
+
+    QJsonArray json = QJsonDocument::fromJson(response.allRawOutput()).array();
+    for (QJsonValue v: json) {
+        QString file = v.toString();
+        if (file == "meson.build") continue;
+
+        ProjectExplorer::FolderNode *baseNode = root;
+        Utils::FileName fn = Utils::FileName::fromString(filename.parentDir().appendPath(file).toString());
+
+        if (file.startsWith("subprojects/")) {
+            if (!subprojects) {
+                Utils::FileName fnSubprojects = Utils::FileName::fromString(filename.parentDir().appendPath("subprojects").toString());
+                subprojects = new ProjectExplorer::FolderNode(fnSubprojects, ProjectExplorer::NodeType::Folder, "subprojects");
+                subprojects->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_qt.png"));
+                root->addNode(subprojects);
+            }
+            baseNode = subprojects;
+        }
+
+        if (file.endsWith("/meson.build")) {
+            auto mfn = new MesonFileNode(this, fn);
+            mfn->setDisplayName(file.mid(0, file.size() - 12));
+            baseNode->addNode(mfn);
+        } else {
+            baseNode->addNestedNode(new ProjectExplorer::FileNode(fn, ProjectExplorer::FileType::Project, false),
+            {}, [](const Utils::FileName &fn) {
+                ProjectExplorer::FolderNode *node = new ProjectExplorer::FolderNode(fn);
+                //node->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_ui.png"));
+                return node;
+            });
+        }
+    }
 }
 
 void MesonProject::mesonIntrospectProjectInfo()
@@ -405,12 +438,10 @@ ProjectExplorer::Project::RestoreResult MesonProject::fromMap(const QVariantMap 
     return RestoreResult::Ok;
 }
 
-MesonProjectNode::MesonProjectNode(MesonProject *project): ProjectExplorer::ProjectNode(project->projectDirectory()), project(project)
+MesonProjectNode::MesonProjectNode(MesonProject *project, const Utils::FileName &filename)
+    : ProjectExplorer::ProjectNode(project->projectDirectory()),
+      partMgr(this, project, filename)
 {
-    meson_build = new ProjectExplorer::ProjectDocument(xxxMeson::PROJECT_MIMETYPE, project->filename, [project]
-    {
-        project->refresh();
-    });
 }
 
 bool MesonProjectNode::supportsAction(ProjectExplorer::ProjectAction action, const ProjectExplorer::Node *node) const
@@ -418,6 +449,99 @@ bool MesonProjectNode::supportsAction(ProjectExplorer::ProjectAction action, con
     Q_UNUSED(node);
     Q_UNUSED(action);
     return false;
+}
+
+MesonProjectPartManager::MesonProjectPartManager(ProjectExplorer::FolderNode *node, MesonProject *project, const Utils::FileName &filename)
+    : project(project)
+{
+    meson_build = std::make_unique<ProjectExplorer::ProjectDocument>(xxxMeson::PROJECT_MIMETYPE, filename, [project]
+    {
+        project->refresh();
+    });
+
+    node->addNode(new ProjectExplorer::FileNode(Utils::FileName::fromString(filename.toString()), ProjectExplorer::FileType::Project, false));
+
+    parser.reset(new MesonBuildParser(filename.toString()));
+    parser->parse();
+
+    for(const auto &listName: parser->fileListNames())
+    {
+        auto listNode = new FileListNode(this, &parser->fileList(listName), Utils::FileName::fromString(parser->getProject_base()),1);
+        listNode->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_ui.png"));
+        listNode->setDisplayName(listName);
+        for(const auto &fname: parser->fileListAbsolute(listName))
+        {
+            listNode->addNestedNode(new ProjectExplorer::FileNode(Utils::FileName::fromString(fname), ProjectExplorer::FileType::Source, false),
+            {}, [](const Utils::FileName &fn) {
+                ProjectExplorer::FolderNode *node = new MesonFileSubFolderNode(fn);
+                node->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_ui.png"));
+                return node;
+            });
+        }
+        node->addNode(listNode);
+    }
+}
+
+MesonFileNode::MesonFileNode(MesonProject *project, const Utils::FileName &filename)
+    : ProjectExplorer::FolderNode(filename.parentDir()),
+      partMgr(this, project, filename)
+{
+
+}
+
+bool MesonFileNode::supportsAction(ProjectExplorer::ProjectAction action, const ProjectExplorer::Node *node) const
+{
+    Q_UNUSED(node);
+    Q_UNUSED(action);
+    return false;
+}
+
+MesonFileSubFolderNode::MesonFileSubFolderNode(const Utils::FileName &filename)
+    : ProjectExplorer::FolderNode(filename)
+{
+}
+
+bool MesonFileSubFolderNode::addFiles(const QStringList &filePaths, QStringList *notAdded)
+{
+    ProjectExplorer::FolderNode *ret = getFileListNode();
+    if (!ret) return false;
+    return ret->addFiles(filePaths, notAdded);
+}
+
+bool MesonFileSubFolderNode::removeFiles(const QStringList &filePaths, QStringList *notRemoved)
+{
+    ProjectExplorer::FolderNode *ret = getFileListNode();
+    if (!ret) return false;
+    return ret->removeFiles(filePaths, notRemoved);
+}
+
+bool MesonFileSubFolderNode::renameFile(const QString &filePath, const QString &newFilePath)
+{
+    ProjectExplorer::FolderNode *ret = getFileListNode();
+    if (!ret) return false;
+    return ret->renameFile(filePath, newFilePath);
+}
+
+bool MesonFileSubFolderNode::supportsAction(ProjectExplorer::ProjectAction action, const ProjectExplorer::Node *node) const
+{
+    ProjectExplorer::FolderNode *ret = getFileListNode();
+    if (!ret) return false;
+    return ret->supportsAction(action, node);
+}
+
+ProjectExplorer::FolderNode *MesonFileSubFolderNode::getFileListNode() const
+{
+    ProjectExplorer::FolderNode *ret = parentFolderNode();
+    do {
+        if (dynamic_cast<FileListNode*>(ret)) {
+            return ret;
+        }
+        if (ret->asProjectNode()) {
+            return nullptr;
+        }
+        ret = ret->parentFolderNode();
+    } while (ret);
+    return ret;
 }
 
 }

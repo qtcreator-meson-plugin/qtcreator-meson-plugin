@@ -3,10 +3,13 @@
 #include <projectexplorer/target.h>
 #include <projectexplorer/project.h>
 #include <projectexplorer/buildinfo.h>
+#include <projectexplorer/buildsteplist.h>
+#include <projectexplorer/projectexplorerconstants.h>
 #include <qtsupport/qtkitinformation.h>
 #include <utils/qtcassert.h>
 
 #include "mesonproject.h"
+#include "ninjamakestep.h"
 
 #include <QDebug>
 #include <QWidget>
@@ -137,6 +140,20 @@ ProjectExplorer::BuildConfiguration *xxxMeson::MesonBuildConfigurationFactory::c
     bc->setDisplayName(info->displayName);
     bc->setDefaultDisplayName(info->displayName);
     bc->setMesonPath(mInfo->mesonPath);
+
+    ProjectExplorer::BuildStepList *buildSteps = bc->stepList(ProjectExplorer::Constants::BUILDSTEPS_BUILD);
+    ProjectExplorer::BuildStepList *cleanSteps = bc->stepList(ProjectExplorer::Constants::BUILDSTEPS_CLEAN);
+
+    Q_ASSERT(buildSteps);
+    auto makeStep = new NinjaMakeStep(buildSteps);
+    buildSteps->insertStep(0, makeStep);
+    makeStep->setBuildTarget("all", /* on = */ true);
+
+    Q_ASSERT(cleanSteps);
+    auto cleanMakeStep = new NinjaMakeStep(cleanSteps);
+    cleanSteps->insertStep(0, cleanMakeStep);
+    cleanMakeStep->setBuildTarget("clean", /* on = */ true);
+
     return bc;
 }
 

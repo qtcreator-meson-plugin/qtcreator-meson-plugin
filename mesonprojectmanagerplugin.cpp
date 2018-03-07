@@ -8,6 +8,7 @@
 #include <coreplugin/actionmanager/command.h>
 #include <coreplugin/editormanager/editormanager.h>
 #include <coreplugin/editormanager/ieditor.h>
+#include <coreplugin/fileiconprovider.h>
 
 #include <projectexplorer/buildmanager.h>
 #include <projectexplorer/session.h>
@@ -38,6 +39,7 @@
 #include "constants.h"
 #include "mesonproject.h"
 #include "mesonprojectwizard.h"
+#include "ninjamakestep.h"
 
 using namespace xxxMeson;
 using namespace Core;
@@ -72,6 +74,9 @@ bool MesonProjectManagerPlugin::initialize(const QStringList &arguments, QString
     const Context projectContext(PROJECT_ID);
     Context projecTreeContext(ProjectExplorer::Constants::C_PROJECT_TREE);
 
+    Core::FileIconProvider::registerIconOverlayForFilename(":/projectexplorer/images/projectexplorer.png", "meson.build");
+    Core::FileIconProvider::registerIconOverlayForFilename(":/projectexplorer/images/projectexplorer.png", "meson_options.txt");
+
     ProjectManager::registerProjectType<MesonProject>(PROJECT_MIMETYPE);
 
     IWizardFactory::registerFactoryCreator([] {
@@ -81,6 +86,7 @@ bool MesonProjectManagerPlugin::initialize(const QStringList &arguments, QString
     });
 
     addAutoReleasedObject(new MesonBuildConfigurationFactory());
+    addAutoReleasedObject(new NinjaMakeStepFactory());
 
     //addAutoReleasedObject(new CustomWizardMetaFactory<CustomQmakeProjectWizard>
 //                          (QLatin1String("qmakeproject"), IWizardFactory::ProjectWizard));

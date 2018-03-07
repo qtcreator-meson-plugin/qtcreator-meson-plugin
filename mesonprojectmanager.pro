@@ -9,7 +9,8 @@ SOURCES += mesonprojectmanagerplugin.cpp \
     mesonbuildconfigurationfactory.cpp \
     mesonprojectimporter.cpp \
     mesonprojectwizard.cpp \
-    mesonprojectparser.cpp
+    mesonprojectparser.cpp \
+    ninjamakestep.cpp
 
 HEADERS += mesonprojectmanagerplugin.h \
         mesonprojectmanager_global.h \
@@ -19,7 +20,8 @@ HEADERS += mesonprojectmanagerplugin.h \
     mesonbuildconfigurationfactory.h \
     mesonprojectimporter.h \
     mesonprojectwizard.h \
-    mesonprojectparser.h
+    mesonprojectparser.h \
+    ninjamakestep.h
 
 # Qt Creator linking
 
