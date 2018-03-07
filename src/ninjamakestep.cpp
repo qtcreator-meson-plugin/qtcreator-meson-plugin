@@ -1,4 +1,6 @@
 #include "ninjamakestep.h"
+#include "ninjamakestepconfigwidget.h"
+#include "../constants.h"
 
 #include <projectexplorer/buildsteplist.h>
 #include <projectexplorer/buildconfiguration.h>
@@ -9,8 +11,6 @@
 #include <projectexplorer/target.h>
 #include <projectexplorer/kitinformation.h>
 #include <projectexplorer/projectexplorerconstants.h>
-
-#include "constants.h"
 
 namespace MesonProjectManager {
 
@@ -182,20 +182,7 @@ void NinjaMakeStep::setBuildTarget(const QString &target, bool on)
     m_buildTargets = old;
 }
 
-NinjaMakeStepConfigWidget::NinjaMakeStepConfigWidget(NinjaMakeStep *makeStep)
-{
 
-}
-
-QString NinjaMakeStepConfigWidget::displayName() const
-{
-    return "ninja";
-}
-
-QString NinjaMakeStepConfigWidget::summaryText() const
-{
-    return "TODO";
-}
 
 NinjaMakeStepFactory::NinjaMakeStepFactory(QObject *parent) :
     IBuildStepFactory(parent)

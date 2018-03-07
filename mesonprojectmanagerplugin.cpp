@@ -39,7 +39,7 @@
 #include "constants.h"
 #include "mesonproject.h"
 #include "mesonprojectwizard.h"
-#include "ninjamakestep.h"
+#include "src/ninjamakestep.h"
 
 using namespace MesonProjectManager;
 using namespace Core;

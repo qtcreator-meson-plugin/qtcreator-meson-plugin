@@ -9,7 +9,7 @@
 #include <utils/qtcassert.h>
 
 #include "mesonproject.h"
-#include "ninjamakestep.h"
+#include "src/ninjamakestep.h"
 
 #include <QDebug>
 #include <QWidget>
