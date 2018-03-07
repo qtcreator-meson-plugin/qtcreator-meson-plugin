@@ -202,7 +202,10 @@ void MesonProject::mesonIntrospectBuildsytemFiles(MesonProjectNode *root)
 
         if (file.endsWith("/meson.build")) {
             auto mfn = new MesonFileNode(this, fn);
-            mfn->setDisplayName(file.mid(0, file.size() - 12));
+            QString dn = file.mid(0, file.size() - 12);
+            if(dn.startsWith("subprojects/"))
+                dn = dn.mid(12);
+            mfn->setDisplayName(dn);
             baseNode->addNode(mfn);
         } else {
             baseNode->addNestedNode(new ProjectExplorer::FileNode(fn, ProjectExplorer::FileType::Project, false),
