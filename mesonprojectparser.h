@@ -5,7 +5,7 @@
 #include <QList>
 #include <QMap>
 
-namespace xxxMeson {
+namespace MesonProjectManager {
 
 class MesonBuildParser {
 public:

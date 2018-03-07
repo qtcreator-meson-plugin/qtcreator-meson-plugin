@@ -1,6 +1,6 @@
 #pragma once
 
-namespace xxxMeson {
+namespace MesonProjectManager {
 
 const char PROJECT_ID[] = "Meson.MesonProject";
 const char PROJECT_MIMETYPE[] = "application/vnd.meson.build";

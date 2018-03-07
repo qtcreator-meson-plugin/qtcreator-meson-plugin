@@ -11,7 +11,7 @@
 #include <memory>
 #include <projectexplorer/buildinfo.h>
 
-namespace xxxMeson {
+namespace MesonProjectManager {
 
 struct MesonProjectImporterData {
     Utils::FileName directory;

@@ -33,7 +33,7 @@
 
 namespace Utils { class FileWizardPage; }
 
-namespace xxxMeson {
+namespace MesonProjectManager {
 
 class MesonProjectWizardDialog;
 

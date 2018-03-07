@@ -45,7 +45,7 @@
 
 #include "constants.h"
 
-namespace xxxMeson {
+namespace MesonProjectManager {
 
 FilesSelectionWizardPage::FilesSelectionWizardPage(MesonProjectWizardDialog *mesonProjectWizard,
                                                    QWidget *parent) :
@@ -148,7 +148,7 @@ QString MesonProjectWizardDialog::projectName() const
 
 MesonProjectWizard::MesonProjectWizard()
 {
-    setSupportedProjectTypes({xxxMeson::PROJECT_ID});
+    setSupportedProjectTypes({MesonProjectManager::PROJECT_ID});
     // TODO do something about the ugliness of standard icons in sizes different than 16, 32, 64, 128
     {
         QPixmap icon(22, 22);

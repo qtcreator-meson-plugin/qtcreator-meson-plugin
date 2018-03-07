@@ -3,7 +3,7 @@
 #include <QByteArray>
 #include <QFileInfo>
 
-namespace xxxMeson {
+namespace MesonProjectManager {
 
 MesonBuildParser::MesonBuildParser(const QString &filename): filename(filename)
 {

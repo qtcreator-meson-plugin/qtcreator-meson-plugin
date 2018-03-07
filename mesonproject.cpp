@@ -38,7 +38,7 @@
 #include <QJsonArray>
 #include <QJsonObject>
 
-namespace xxxMeson {
+namespace MesonProjectManager {
 
 class FileListNode : public ProjectExplorer::VirtualFolderNode {
 public:
@@ -468,7 +468,7 @@ bool MesonProjectNode::supportsAction(ProjectExplorer::ProjectAction action, con
 MesonProjectPartManager::MesonProjectPartManager(ProjectExplorer::FolderNode *node, MesonProject *project, const Utils::FileName &filename)
     : project(project)
 {
-    meson_build = std::make_unique<ProjectExplorer::ProjectDocument>(xxxMeson::PROJECT_MIMETYPE, filename, [project]
+    meson_build = std::make_unique<ProjectExplorer::ProjectDocument>(MesonProjectManager::PROJECT_MIMETYPE, filename, [project]
     {
         project->refresh();
     });

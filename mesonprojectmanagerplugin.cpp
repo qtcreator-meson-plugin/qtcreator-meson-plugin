@@ -41,7 +41,7 @@
 #include "mesonprojectwizard.h"
 #include "ninjamakestep.h"
 
-using namespace xxxMeson;
+using namespace MesonProjectManager;
 using namespace Core;
 using namespace ProjectExplorer;
 

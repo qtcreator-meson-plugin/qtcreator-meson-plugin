@@ -4,7 +4,7 @@
 #include <projectexplorer/kit.h>
 #include <projectexplorer/namedwidget.h>
 
-namespace xxxMeson {
+namespace MesonProjectManager {
 
 class MesonBuildInfo : public ProjectExplorer::BuildInfo {
 public:

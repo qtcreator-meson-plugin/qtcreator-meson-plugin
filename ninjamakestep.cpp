@@ -12,7 +12,7 @@
 
 #include "constants.h"
 
-namespace xxxMeson {
+namespace MesonProjectManager {
 
 const char NINJA_MS_ID[] = "MesonProjectManager.NinjaMakeStep";
 

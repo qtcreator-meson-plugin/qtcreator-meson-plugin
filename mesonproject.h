@@ -14,7 +14,7 @@
 
 #include <cpptools/cppprojectupdater.h>
 
-namespace xxxMeson {
+namespace MesonProjectManager {
 
 class MesonProject;
 

@@ -2,7 +2,7 @@
 
 #include <projectexplorer/abstractprocessstep.h>
 
-namespace xxxMeson {
+namespace MesonProjectManager {
 
 class NinjaMakeStep : public ProjectExplorer::AbstractProcessStep
 {
