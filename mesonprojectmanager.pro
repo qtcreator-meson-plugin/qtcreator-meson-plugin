@@ -9,21 +9,21 @@ SOURCES += \
     mesonbuildconfigurationfactory.cpp \
     mesonprojectimporter.cpp \
     mesonprojectwizard.cpp \
-    mesonprojectparser.cpp \
     src/ninjamakestep.cpp \
     src/ninjamakestepconfigwidget.cpp \
-    src/mesonprojectmanagerplugin.cpp
+    src/mesonprojectmanagerplugin.cpp \
+    src/mesonprojectparser.cpp
 
 HEADERS += \
     mesonproject.h \
     mesonbuildconfigurationfactory.h \
     mesonprojectimporter.h \
     mesonprojectwizard.h \
-    mesonprojectparser.h \
     src/ninjamakestep.h \
     src/ninjamakestepconfigwidget.h \
     src/constants.h \
-    src/mesonprojectmanagerplugin.h
+    src/mesonprojectmanagerplugin.h \
+    src/mesonprojectparser.h
 
 # Qt Creator linking
 

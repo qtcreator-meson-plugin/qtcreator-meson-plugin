@@ -7,15 +7,18 @@
 
 namespace MesonProjectManager {
 
-class MesonBuildParser {
+class MesonBuildParser
+{
 public:
-    enum class ChunkType {
+    enum class ChunkType
+    {
         file_list,
         other,
     };
 
-    struct ChunkInfo
+    class ChunkInfo
     {
+    public:
         ChunkType type;
         QString line;
         QString file_list_name;

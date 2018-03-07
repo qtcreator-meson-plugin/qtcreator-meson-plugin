@@ -1,18 +1,19 @@
 #pragma once
 
-#include <memory>
+#include "src/mesonprojectparser.h"
+
 
 #include <projectexplorer/project.h>
 #include <projectexplorer/projectnodes.h>
-//#include <projectexplorer/runconfiguration.h>
-#include "mesonprojectparser.h"
+
+#include <cpptools/cppprojectupdater.h>
 
 #include <QStringList>
 #include <QFutureInterface>
 #include <QTimer>
 #include <QFuture>
 
-#include <cpptools/cppprojectupdater.h>
+#include <memory>
 
 namespace MesonProjectManager {
 
