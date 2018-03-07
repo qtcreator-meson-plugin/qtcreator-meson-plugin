@@ -3,6 +3,7 @@
 #include "src/constants.h"
 #include "src/ninjamakestep.h"
 #include "mesonproject.h"
+#include "src/mesonbuildinfo.h"
 
 #include <projectexplorer/buildconfiguration.h>
 #include <projectexplorer/target.h>

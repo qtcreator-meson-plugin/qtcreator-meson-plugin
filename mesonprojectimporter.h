@@ -2,6 +2,8 @@
 
 #include "mesonbuildconfigurationfactory.h"
 
+#include "src/mesonbuildinfo.h"
+
 #include <QStringList>
 #include <QTextStream>
 

@@ -12,7 +12,8 @@ SOURCES += \
     src/ninjamakestep.cpp \
     src/ninjamakestepconfigwidget.cpp \
     src/mesonprojectmanagerplugin.cpp \
-    src/mesonprojectparser.cpp
+    src/mesonprojectparser.cpp \
+    src/mesonbuildinfo.cpp
 
 HEADERS += \
     mesonproject.h \
@@ -23,7 +24,8 @@ HEADERS += \
     src/ninjamakestepconfigwidget.h \
     src/constants.h \
     src/mesonprojectmanagerplugin.h \
-    src/mesonprojectparser.h
+    src/mesonprojectparser.h \
+    src/mesonbuildinfo.h
 
 # Qt Creator linking
 

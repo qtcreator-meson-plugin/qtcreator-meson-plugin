@@ -1,27 +1,9 @@
 #pragma once
 #include <projectexplorer/buildconfiguration.h>
-#include <projectexplorer/buildinfo.h>
 #include <projectexplorer/kit.h>
 #include <projectexplorer/namedwidget.h>
 
 namespace MesonProjectManager {
-
-class MesonBuildInfo : public ProjectExplorer::BuildInfo {
-public:
-    MesonBuildInfo(const ProjectExplorer::IBuildConfigurationFactory *f) : ProjectExplorer::BuildInfo(f) { }
-
-    QString mesonPath;
-
-    bool operator==(const BuildInfo &o) const
-    {
-        if (!ProjectExplorer::BuildInfo::operator==(o))
-            return false;
-
-        auto other = static_cast<const MesonBuildInfo *>(&o);
-        return mesonPath == other->mesonPath;
-    }
-
-};
 
 class MesonBuildConfiguration : public ProjectExplorer::BuildConfiguration
 {
