@@ -137,7 +137,6 @@ void MesonProject::refresh()
         return;
     }
     emitParsingStarted();
-    std::cerr << "refreshing\n";
     // Stuff stolen from genericproject::refresh
     auto root = new MesonProjectNode(this, filename);
 
