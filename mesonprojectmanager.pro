@@ -6,18 +6,17 @@ QT *= network
 
 SOURCES += \
     mesonproject.cpp \
-    mesonbuildconfigurationfactory.cpp \
     mesonprojectimporter.cpp \
     mesonprojectwizard.cpp \
     src/ninjamakestep.cpp \
     src/ninjamakestepconfigwidget.cpp \
     src/mesonprojectmanagerplugin.cpp \
     src/mesonprojectparser.cpp \
-    src/mesonbuildinfo.cpp
+    src/mesonbuildinfo.cpp \
+    src/mesonbuildconfiguration.cpp
 
 HEADERS += \
     mesonproject.h \
-    mesonbuildconfigurationfactory.h \
     mesonprojectimporter.h \
     mesonprojectwizard.h \
     src/ninjamakestep.h \
@@ -25,7 +24,8 @@ HEADERS += \
     src/constants.h \
     src/mesonprojectmanagerplugin.h \
     src/mesonprojectparser.h \
-    src/mesonbuildinfo.h
+    src/mesonbuildinfo.h \
+    src/mesonbuildconfiguration.h
 
 # Qt Creator linking
 

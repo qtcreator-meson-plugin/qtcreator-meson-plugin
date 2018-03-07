@@ -2,7 +2,7 @@
 
 #include "constants.h"
 #include "ninjamakestep.h"
-#include "../mesonbuildconfigurationfactory.h"
+#include "mesonbuildconfiguration.h"
 #include "../mesonproject.h"
 #include "../mesonprojectwizard.h"
 

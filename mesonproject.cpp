@@ -16,7 +16,7 @@
 #include <coreplugin/icontext.h>
 #include <coreplugin/icore.h>
 #include <coreplugin/fileiconprovider.h>
-#include "mesonbuildconfigurationfactory.h"
+#include "src/mesonbuildconfiguration.h"
 #include "mesonprojectimporter.h"
 
 #include <cpptools/cpptoolsconstants.h>

@@ -1,9 +1,9 @@
-#include "mesonbuildconfigurationfactory.h"
+#include "mesonbuildconfiguration.h"
 
-#include "src/constants.h"
-#include "src/ninjamakestep.h"
-#include "mesonproject.h"
-#include "src/mesonbuildinfo.h"
+#include "constants.h"
+#include "ninjamakestep.h"
+#include "mesonbuildinfo.h"
+#include "../mesonproject.h"
 
 #include <projectexplorer/buildconfiguration.h>
 #include <projectexplorer/target.h>
@@ -17,24 +17,26 @@
 #include <QDebug>
 #include <QWidget>
 
-MesonProjectManager::MesonBuildConfiguration::MesonBuildConfiguration(ProjectExplorer::Target *parent)
-    : BuildConfiguration(parent, Core::Id(MESON_BC_ID)){
+namespace MesonProjectManager {
 
+MesonBuildConfiguration::MesonBuildConfiguration(ProjectExplorer::Target *parent) :
+    BuildConfiguration(parent, Core::Id(MESON_BC_ID))
+{
 }
 
-ProjectExplorer::NamedWidget *MesonProjectManager::MesonBuildConfiguration::createConfigWidget()
+ProjectExplorer::NamedWidget *MesonBuildConfiguration::createConfigWidget()
 {
     auto w = new ProjectExplorer::NamedWidget();
     //w->setDisplayName(tr("Meson Manager"));
     return w;
 }
 
-ProjectExplorer::BuildConfiguration::BuildType MesonProjectManager::MesonBuildConfiguration::buildType() const
+ProjectExplorer::BuildConfiguration::BuildType MesonBuildConfiguration::buildType() const
 {
     return ProjectExplorer::BuildConfiguration::BuildType::Unknown;
 }
 
-bool MesonProjectManager::MesonBuildConfiguration::fromMap(const QVariantMap &map)
+bool MesonBuildConfiguration::fromMap(const QVariantMap &map)
 {
     if (!BuildConfiguration::fromMap(map))
         return false;
@@ -44,35 +46,34 @@ bool MesonProjectManager::MesonBuildConfiguration::fromMap(const QVariantMap &ma
     return true;
 }
 
-QVariantMap MesonProjectManager::MesonBuildConfiguration::toMap() const
+QVariantMap MesonBuildConfiguration::toMap() const
 {
     QVariantMap map(BuildConfiguration::toMap());
     map.insert(MESON_BC_MESON_PATH, m_mesonPath);
     return map;
 }
 
-QString MesonProjectManager::MesonBuildConfiguration::mesonPath() const
+QString MesonBuildConfiguration::mesonPath() const
 {
     return m_mesonPath;
 }
 
-void MesonProjectManager::MesonBuildConfiguration::setMesonPath(const QString &mesonPath)
+void MesonBuildConfiguration::setMesonPath(const QString &mesonPath)
 {
     m_mesonPath = mesonPath;
 }
 
-MesonProjectManager::MesonBuildConfigurationFactory::MesonBuildConfigurationFactory(QObject *parent):
+MesonBuildConfigurationFactory::MesonBuildConfigurationFactory(QObject *parent):
     IBuildConfigurationFactory(parent)
 {
-
 }
 
-int MesonProjectManager::MesonBuildConfigurationFactory::priority(const ProjectExplorer::Target *parent) const
+int MesonBuildConfigurationFactory::priority(const ProjectExplorer::Target *parent) const
 {
     return correctProject(parent) ? 0 : -1;
 }
 
-ProjectExplorer::BuildInfo *MesonProjectManager::MesonBuildConfigurationFactory::createBuildInfo(const ProjectExplorer::Kit *k,
+ProjectExplorer::BuildInfo *MesonBuildConfigurationFactory::createBuildInfo(const ProjectExplorer::Kit *k,
                                                                                       const QString &projectPath,
                                                                                       ProjectExplorer::BuildConfiguration::BuildType type) const
 {
@@ -88,13 +89,13 @@ ProjectExplorer::BuildInfo *MesonProjectManager::MesonBuildConfigurationFactory:
     return info;
 }
 
-bool MesonProjectManager::MesonBuildConfigurationFactory::correctProject(const ProjectExplorer::Target *parent) const
+bool MesonBuildConfigurationFactory::correctProject(const ProjectExplorer::Target *parent) const
 {
     return qobject_cast<MesonProject*>(parent->project());
 }
 
 
-QList<ProjectExplorer::BuildInfo *> MesonProjectManager::MesonBuildConfigurationFactory::availableBuilds(const ProjectExplorer::Target *parent) const
+QList<ProjectExplorer::BuildInfo *> MesonBuildConfigurationFactory::availableBuilds(const ProjectExplorer::Target *parent) const
 {
     QList<ProjectExplorer::BuildInfo *> result;
 
@@ -109,12 +110,12 @@ QList<ProjectExplorer::BuildInfo *> MesonProjectManager::MesonBuildConfiguration
     return result;
 }
 
-int MesonProjectManager::MesonBuildConfigurationFactory::priority(const ProjectExplorer::Kit *k, const QString &projectPath) const
+int MesonBuildConfigurationFactory::priority(const ProjectExplorer::Kit *k, const QString &projectPath) const
 {
     return 0;
 }
 
-QList<ProjectExplorer::BuildInfo *> MesonProjectManager::MesonBuildConfigurationFactory::availableSetups(const ProjectExplorer::Kit *k, const QString &projectPath) const
+QList<ProjectExplorer::BuildInfo *> MesonBuildConfigurationFactory::availableSetups(const ProjectExplorer::Kit *k, const QString &projectPath) const
 {
     // Used in initial setup. Returning nothing breaks easy import in setup dialog.
 
@@ -127,7 +128,7 @@ QList<ProjectExplorer::BuildInfo *> MesonProjectManager::MesonBuildConfiguration
     return result;
 }
 
-ProjectExplorer::BuildConfiguration *MesonProjectManager::MesonBuildConfigurationFactory::create(ProjectExplorer::Target *parent, const ProjectExplorer::BuildInfo *info) const
+ProjectExplorer::BuildConfiguration *MesonBuildConfigurationFactory::create(ProjectExplorer::Target *parent, const ProjectExplorer::BuildInfo *info) const
 {
     QTC_ASSERT(info->factory() == this, return 0);
     QTC_ASSERT(info->kitId == parent->kit()->id(), return 0);
@@ -157,32 +158,33 @@ ProjectExplorer::BuildConfiguration *MesonProjectManager::MesonBuildConfiguratio
     return bc;
 }
 
-bool MesonProjectManager::MesonBuildConfigurationFactory::canRestore(const ProjectExplorer::Target *parent, const QVariantMap &map) const
+bool MesonBuildConfigurationFactory::canRestore(const ProjectExplorer::Target *parent, const QVariantMap &map) const
 {
     return correctProject(parent) && ProjectExplorer::idFromMap(map) == MESON_BC_ID;
 }
 
-ProjectExplorer::BuildConfiguration *MesonProjectManager::MesonBuildConfigurationFactory::restore(ProjectExplorer::Target *parent, const QVariantMap &map)
+ProjectExplorer::BuildConfiguration *MesonBuildConfigurationFactory::restore(ProjectExplorer::Target *parent, const QVariantMap &map)
 {
-    if (!canRestore(parent, map)) {
+    if (!canRestore(parent, map))
         return nullptr;
-    }
+
     std::unique_ptr<ProjectExplorer::BuildConfiguration> bc;
     bc = std::make_unique<MesonBuildConfiguration>(parent);
-    if (!bc->fromMap(map)) {
+    if (!bc->fromMap(map))
         return nullptr;
-    }
     return bc.release();
 }
 
-bool MesonProjectManager::MesonBuildConfigurationFactory::canClone(const ProjectExplorer::Target *parent, ProjectExplorer::BuildConfiguration *product) const
+bool MesonBuildConfigurationFactory::canClone(const ProjectExplorer::Target *parent, ProjectExplorer::BuildConfiguration *product) const
 {
     qDebug()<<__PRETTY_FUNCTION__<<" TODO";
     return false;
 }
 
-ProjectExplorer::BuildConfiguration *MesonProjectManager::MesonBuildConfigurationFactory::clone(ProjectExplorer::Target *parent, ProjectExplorer::BuildConfiguration *product)
+ProjectExplorer::BuildConfiguration *MesonBuildConfigurationFactory::clone(ProjectExplorer::Target *parent, ProjectExplorer::BuildConfiguration *product)
 {
     qDebug()<<__PRETTY_FUNCTION__<<" TODO";
     return nullptr;
+}
+
 }
