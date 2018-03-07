@@ -5,27 +5,37 @@ QT *= network
 # MesonProjectManager files
 
 SOURCES += \
-    mesonproject.cpp \
     mesonprojectwizard.cpp \
     src/ninjamakestep.cpp \
     src/ninjamakestepconfigwidget.cpp \
     src/mesonprojectmanagerplugin.cpp \
-    src/mesonprojectparser.cpp \
     src/mesonbuildinfo.cpp \
     src/mesonbuildconfiguration.cpp \
-    src/mesonprojectimporter.cpp
+    src/mesonprojectimporter.cpp \
+    src/filelistnode.cpp \
+    src/mesonbuildfileparser.cpp \
+    src/mesonprojectnode.cpp \
+    src/mesonprojectpartmanager.cpp \
+    src/mesonfilenode.cpp \
+    src/mesonfilesubfoldernode.cpp \
+    src/mesonproject.cpp
 
 HEADERS += \
-    mesonproject.h \
     mesonprojectwizard.h \
     src/ninjamakestep.h \
     src/ninjamakestepconfigwidget.h \
     src/constants.h \
     src/mesonprojectmanagerplugin.h \
-    src/mesonprojectparser.h \
     src/mesonbuildinfo.h \
     src/mesonbuildconfiguration.h \
-    src/mesonprojectimporter.h
+    src/mesonprojectimporter.h \
+    src/filelistnode.h \
+    src/mesonbuildfileparser.h \
+    src/mesonprojectnode.h \
+    src/mesonprojectpartmanager.h \
+    src/mesonfilenode.h \
+    src/mesonfilesubfoldernode.h \
+    src/mesonproject.h
 
 # Qt Creator linking
 

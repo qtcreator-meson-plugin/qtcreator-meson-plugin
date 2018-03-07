@@ -3,7 +3,7 @@
 #include "constants.h"
 #include "ninjamakestep.h"
 #include "mesonbuildconfiguration.h"
-#include "../mesonproject.h"
+#include "mesonproject.h"
 #include "../mesonprojectwizard.h"
 
 #include <coreplugin/fileiconprovider.h>

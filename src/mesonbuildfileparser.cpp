@@ -1,4 +1,4 @@
-#include "mesonprojectparser.h"
+#include "mesonbuildfileparser.h"
 
 #include <QFile>
 #include <QByteArray>
@@ -6,12 +6,12 @@
 
 namespace MesonProjectManager {
 
-MesonBuildParser::MesonBuildParser(const QString &filename): filename(filename)
+MesonBuildFileParser::MesonBuildFileParser(const QString &filename): filename(filename)
 {
     project_base=QFileInfo(filename).absolutePath();
 }
 
-void MesonBuildParser::parse()
+void MesonBuildFileParser::parse()
 {
     QFile file(filename);
     file.open(QIODevice::ReadOnly);
@@ -59,7 +59,7 @@ void MesonBuildParser::parse()
     }
 }
 
-QByteArray MesonBuildParser::regenerate()
+QByteArray MesonBuildFileParser::regenerate()
 {
     QByteArray output;
     for (auto& chunk: chunks)
@@ -77,12 +77,12 @@ QByteArray MesonBuildParser::regenerate()
     return output;
 }
 
-MesonBuildParser::ChunkInfo &MesonBuildParser::fileList(const QString &name)
+MesonBuildFileParser::ChunkInfo &MesonBuildFileParser::fileList(const QString &name)
 {
     return *file_lists.value(name);
 }
 
-QStringList MesonBuildParser::fileListAbsolute(const QString &name)
+QStringList MesonBuildFileParser::fileListAbsolute(const QString &name)
 {
     QStringList result;
     for (const auto &filename: fileList(name).file_list)
@@ -90,22 +90,22 @@ QStringList MesonBuildParser::fileListAbsolute(const QString &name)
     return result;
 }
 
-const MesonBuildParser::ChunkInfo &MesonBuildParser::fileList(const QString &name) const
+const MesonBuildFileParser::ChunkInfo &MesonBuildFileParser::fileList(const QString &name) const
 {
     return *file_lists.value(name);
 }
 
-bool MesonBuildParser::hasFileList(const QString &name) const
+bool MesonBuildFileParser::hasFileList(const QString &name) const
 {
     return file_lists.contains(name);
 }
 
-QStringList MesonBuildParser::fileListNames() const
+QStringList MesonBuildFileParser::fileListNames() const
 {
     return file_lists.keys();
 }
 
-QString MesonBuildParser::getProject_base() const
+QString MesonBuildFileParser::getProject_base() const
 {
     return project_base;
 }

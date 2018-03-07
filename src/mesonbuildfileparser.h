@@ -7,7 +7,7 @@
 
 namespace MesonProjectManager {
 
-class MesonBuildParser
+class MesonBuildFileParser
 {
 public:
     enum class ChunkType
@@ -26,7 +26,7 @@ public:
     };
 
     const QString filename;
-    MesonBuildParser(const QString& filename);
+    MesonBuildFileParser(const QString& filename);
     void parse();
     QByteArray regenerate();
 
