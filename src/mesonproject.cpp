@@ -255,7 +255,10 @@ const QHash<CompileCommandInfo, QStringList> MesonProject::parseCompileCommands(
             } else if (part.startsWith("-U")) {
                 info.defines.remove(part.mid(2));
             } else if (part.startsWith("-I")) {
-                QString idir = dir+"/"+part.mid(2);
+                QString idir = part.mid(2);
+                if (!idir.startsWith("/")) {
+                    idir = dir + "/" + idir;
+                }
                 if (!idir.endsWith("/"))
                     idir.append("/");
                 info.includes.append(idir);
