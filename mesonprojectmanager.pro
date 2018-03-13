@@ -18,7 +18,8 @@ SOURCES += \
     src/mesonprojectpartmanager.cpp \
     src/mesonfilenode.cpp \
     src/mesonfilesubfoldernode.cpp \
-    src/mesonproject.cpp
+    src/mesonproject.cpp \
+    src/fixdirectoryparser.cpp
 
 HEADERS += \
     mesonprojectwizard.h \
@@ -35,7 +36,8 @@ HEADERS += \
     src/mesonprojectpartmanager.h \
     src/mesonfilenode.h \
     src/mesonfilesubfoldernode.h \
-    src/mesonproject.h
+    src/mesonproject.h \
+    src/fixdirectoryparser.h
 
 # Qt Creator linking
 

@@ -1,16 +1,17 @@
+#include "constants.h"
+#include "fixdirectoryparser.h"
 #include "ninjamakestep.h"
 #include "ninjamakestepconfigwidget.h"
-#include "constants.h"
 
-#include <projectexplorer/buildsteplist.h>
 #include <projectexplorer/buildconfiguration.h>
 #include <projectexplorer/buildstep.h>
+#include <projectexplorer/buildsteplist.h>
+#include <projectexplorer/kitinformation.h>
 #include <projectexplorer/processparameters.h>
 #include <projectexplorer/project.h>
-#include <projectexplorer/toolchain.h>
-#include <projectexplorer/target.h>
-#include <projectexplorer/kitinformation.h>
 #include <projectexplorer/projectexplorerconstants.h>
+#include <projectexplorer/target.h>
+#include <projectexplorer/toolchain.h>
 
 namespace MesonProjectManager {
 
@@ -80,10 +81,10 @@ bool NinjaMakeStep::init(QList<const ProjectExplorer::BuildStep *> &earlierSteps
 
     setIgnoreReturnValue(m_buildTargets == QStringList{ "clean" });
 
-    //setOutputParser(new GnuMakeParser());
+    setOutputParser(new FixDirectoryParser());
     ProjectExplorer::IOutputParser *parser = target()->kit()->createOutputParser();
     if (parser)
-        setOutputParser(parser);
+        appendOutputParser(parser);
     outputParser()->setWorkingDirectory(pp->effectiveWorkingDirectory());
 
     return AbstractProcessStep::init(earlierSteps);
