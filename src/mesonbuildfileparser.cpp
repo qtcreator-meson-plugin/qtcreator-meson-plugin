@@ -70,7 +70,7 @@ QByteArray MesonBuildFileParser::regenerate()
             output.append(QString(chunk.file_list_name+" = [\n").toUtf8());
             chunk.file_list.sort();
             for (const auto& file: chunk.file_list)
-                output.append(QString("    '"+file+"',\n").toUtf8());
+                output.append(QString("  '"+file+"',\n").toUtf8());
             output.append("]\n");
         }
     }

@@ -28,11 +28,14 @@
 #include <coreplugin/icore.h>
 #include <projectexplorer/projectexplorerconstants.h>
 #include <projectexplorer/customwizard/customwizard.h>
+#include <projectexplorer/taskhub.h>
+#include <projectexplorer/task.h>
 
 #include <utils/algorithm.h>
 #include <utils/fileutils.h>
 #include <utils/filewizardpage.h>
 #include <utils/mimetypes/mimedatabase.h>
+#include <utils/synchronousprocess.h>
 
 #include <QApplication>
 #include <QDebug>
@@ -47,60 +50,10 @@
 
 namespace MesonProjectManager {
 
-FilesSelectionWizardPage::FilesSelectionWizardPage(MesonProjectWizardDialog *mesonProjectWizard,
-                                                   QWidget *parent) :
-    QWizardPage(parent),
-    m_mesonProjectWizardDialog(mesonProjectWizard),
-    m_filesWidget(new ProjectExplorer::SelectableFilesWidget(this))
-{
-    QVBoxLayout *layout = new QVBoxLayout(this);
-
-    layout->addWidget(m_filesWidget);
-    m_filesWidget->setBaseDirEditable(false);
-    connect(m_filesWidget, &ProjectExplorer::SelectableFilesWidget::selectedFilesChanged,
-            this, &FilesSelectionWizardPage::completeChanged);
-
-    setProperty(Utils::SHORT_TITLE_PROPERTY, tr("Files"));
-}
-
-void FilesSelectionWizardPage::initializePage()
-{
-    m_filesWidget->resetModel(Utils::FileName::fromString(m_mesonProjectWizardDialog->path()),
-                              Utils::FileNameList());
-}
-
-void FilesSelectionWizardPage::cleanupPage()
-{
-    m_filesWidget->cancelParsing();
-}
-
-bool FilesSelectionWizardPage::isComplete() const
-{
-    return m_filesWidget->hasFilesSelected();
-}
-
-Utils::FileNameList FilesSelectionWizardPage::selectedPaths() const
-{
-    return m_filesWidget->selectedPaths();
-}
-
-Utils::FileNameList FilesSelectionWizardPage::selectedFiles() const
-{
-    return m_filesWidget->selectedFiles();
-}
-
-
-//////////////////////////////////////////////////////////////////////////////
-//
-// MesonProjectWizardDialog
-//
-//////////////////////////////////////////////////////////////////////////////
-
-MesonProjectWizardDialog::MesonProjectWizardDialog(const Core::BaseFileWizardFactory *factory,
-                                                       QWidget *parent) :
+MesonProjectWizardDialog::MesonProjectWizardDialog(const Core::BaseFileWizardFactory *factory, QWidget *parent) :
     Core::BaseFileWizard(factory, QVariantMap(), parent)
 {
-    setWindowTitle(tr("Import Existing Project"));
+    setWindowTitle(tr("Create New Meson C++ Application"));
 
     // first page
     m_firstPage = new Utils::FileWizardPage;
@@ -108,27 +61,12 @@ MesonProjectWizardDialog::MesonProjectWizardDialog(const Core::BaseFileWizardFac
     m_firstPage->setFileNameLabel(tr("Project name:"));
     m_firstPage->setPathLabel(tr("Location:"));
     addPage(m_firstPage);
-
-    // second page
-    //m_secondPage = new FilesSelectionWizardPage(this);
-    //m_secondPage->setTitle(tr("File Selection"));
-    //addPage(m_secondPage);
 }
 
 QString MesonProjectWizardDialog::path() const
 {
     return m_firstPage->path();
 }
-
-/*Utils::FileNameList MesonProjectWizardDialog::selectedPaths() const
-{
-    return m_secondPage->selectedPaths();
-}
-
-Utils::FileNameList MesonProjectWizardDialog::selectedFiles() const
-{
-    return m_secondPage->selectedFiles();
-}*/
 
 void MesonProjectWizardDialog::setPath(const QString &path)
 {
@@ -140,34 +78,19 @@ QString MesonProjectWizardDialog::projectName() const
     return m_firstPage->fileName();
 }
 
-//////////////////////////////////////////////////////////////////////////////
-//
-// MesonProjectWizard
-//
-//////////////////////////////////////////////////////////////////////////////
-
 MesonProjectWizard::MesonProjectWizard()
 {
-    setSupportedProjectTypes({MesonProjectManager::PROJECT_ID});
-    // TODO do something about the ugliness of standard icons in sizes different than 16, 32, 64, 128
-    {
-        QPixmap icon(22, 22);
-        icon.fill(Qt::transparent);
-        QPainter p(&icon);
-        p.drawPixmap(3, 3, 16, 16, qApp->style()->standardIcon(QStyle::SP_DirIcon).pixmap(16));
-        setIcon(icon);
-    }
-    setDisplayName(tr("Meosn Foo"));
-    setId("Z.Meson");
-    setDescription(tr("Imports existing projects that do not use qmake, CMake or Autotools. "
-                      "This allows you to use Qt Creator as a code editor."));
     setCategory(QLatin1String(ProjectExplorer::Constants::QT_PROJECT_WIZARD_CATEGORY));
+    setDescription(tr("Creates a new project for use with the meson build system."));
     setDisplayCategory(QLatin1String(ProjectExplorer::Constants::QT_PROJECT_WIZARD_CATEGORY_DISPLAY));
+    setDisplayName(tr("Meson C++ Application"));
     setFlags(Core::IWizardFactory::PlatformIndependent);
+    setIcon(QPixmap(":/mesonprojectmanager/images/meson_logo.png"));
+    setId("Z.Meson");
+    setSupportedProjectTypes({MesonProjectManager::PROJECT_ID});
 }
 
-Core::BaseFileWizard *MesonProjectWizard::create(QWidget *parent,
-                                                   const Core::WizardDialogParameters &parameters) const
+Core::BaseFileWizard *MesonProjectWizard::create(QWidget *parent, const Core::WizardDialogParameters &parameters) const
 {
     MesonProjectWizardDialog *wizard = new MesonProjectWizardDialog(this, parent);
 
@@ -179,72 +102,74 @@ Core::BaseFileWizard *MesonProjectWizard::create(QWidget *parent,
     return wizard;
 }
 
-Core::GeneratedFiles MesonProjectWizard::generateFiles(const QWizard *w,
-                                                         QString *errorMessage) const
+Core::GeneratedFiles MesonProjectWizard::generateFiles(const QWizard *w, QString *errorMessage) const
 {
     Q_UNUSED(errorMessage)
 
     const MesonProjectWizardDialog *wizard = qobject_cast<const MesonProjectWizardDialog *>(w);
     const QString projectPath = wizard->path();
-    const QDir dir(projectPath);
     const QString projectName = wizard->projectName();
-    const QString creatorFileName = QFileInfo(dir, QLatin1String("meson.build")).absoluteFilePath();
-    const QString filesFileName = QFileInfo(dir, projectName + QLatin1String(".files")).absoluteFilePath();
-    const QString includesFileName = QFileInfo(dir, projectName + QLatin1String(".includes")).absoluteFilePath();
-    const QString configFileName = QFileInfo(dir, projectName + QLatin1String(".config")).absoluteFilePath();
-    //const QStringList paths = Utils::transform(wizard->selectedPaths(), &Utils::FileName::toString);
+    QString safeProjectName = projectName;
+    safeProjectName.replace(' ', '_');
+    const QDir dir(projectPath+"/"+safeProjectName);
+    const QString mesonBuildFileName = QFileInfo(dir, QStringLiteral("meson.build")).absoluteFilePath();
+    const QString cppFileName = QFileInfo(dir, QStringLiteral("%1.cpp").arg(safeProjectName)).absoluteFilePath();
 
-    Utils::MimeType headerTy = Utils::mimeTypeForName(QLatin1String("text/x-chdr"));
+    Core::GeneratedFile mesonBuildFile(mesonBuildFileName);
+    const QString projectFileTemplate = QStringLiteral(R"(project('%1', 'cpp',
+  version : '1.0',
+  default_options : ['warning_level=3',
+                     'cpp_std=c++14'])
 
-    QStringList nameFilters = headerTy.globPatterns();
+#ide:editable-filelist
+sources = [
+  '%2.cpp',
+]
 
-    QStringList includePaths;
-    /*foreach (const QString &path, paths) {
-        QFileInfo fileInfo(path);
-        QDir thisDir(fileInfo.absoluteFilePath());
+exe = executable('%2', sources, install : true)
 
-        if (! thisDir.entryList(nameFilters, QDir::Files).isEmpty()) {
-            QString relative = dir.relativeFilePath(path);
-            if (relative.isEmpty())
-                relative = QLatin1Char('.');
-            includePaths.append(relative);
-        }
-    }*/
-    includePaths.append(QString()); // ensure newline at EOF
+test('basic', exe))");
+    mesonBuildFile.setContents(projectFileTemplate.arg(projectName, safeProjectName));
+    mesonBuildFile.setAttributes(Core::GeneratedFile::OpenProjectAttribute);
 
-    Core::GeneratedFile generatedCreatorFile(creatorFileName);
-    generatedCreatorFile.setContents(QLatin1String("[General]\n"));
-    generatedCreatorFile.setAttributes(Core::GeneratedFile::OpenProjectAttribute);
+    Core::GeneratedFile cppFile(cppFileName);
+    cppFile.setContents(R"(#include <iostream>
 
-    /*QStringList sources = Utils::transform(wizard->selectedFiles(), &Utils::FileName::toString);
-    for (int i = 0; i < sources.length(); ++i)
-        sources[i] = dir.relativeFilePath(sources[i]);
-    Utils::sort(sources);
-    sources.append(QString()); // ensure newline at EOF
+int main(int argv, char *argv[]) {
+    std::cout<<"Hello World!"<<std::endl;
+    return 0;
+})");
 
-    Core::GeneratedFile generatedFilesFile(filesFileName);
-    generatedFilesFile.setContents(sources.join(QLatin1Char('\n')));*/
-
-    /*Core::GeneratedFile generatedIncludesFile(includesFileName);
-    generatedIncludesFile.setContents(includePaths.join(QLatin1Char('\n')));
-
-    Core::GeneratedFile generatedConfigFile(configFileName);
-    generatedConfigFile.setContents(QLatin1String(ConfigFileTemplate));
-*/
     Core::GeneratedFiles files;
-/*    files.append(generatedFilesFile);
-    files.append(generatedIncludesFile);
-    files.append(generatedConfigFile);*/
-    files.append(generatedCreatorFile);
+    files.append(mesonBuildFile);
+    files.append(cppFile);
 
     return files;
 }
 
-bool MesonProjectWizard::postGenerateFiles(const QWizard *w, const Core::GeneratedFiles &l,
-                                             QString *errorMessage) const
+bool MesonProjectWizard::postGenerateFiles(const QWizard *w, const Core::GeneratedFiles &l, QString *errorMessage) const
 {
     Q_UNUSED(w);
+
+    const MesonProjectWizardDialog *wizard = qobject_cast<const MesonProjectWizardDialog *>(w);
+    const QString projectPath = wizard->path();
+    const QString projectName = wizard->projectName();
+    QString safeProjectName = projectName;
+    safeProjectName.replace(' ', '_');
+    const QDir dir(projectPath+"/"+safeProjectName);
+
+    // TODO: Manually construct project, add build configuration, save .user file, discard project.
+    Utils::SynchronousProcess proc;
+    proc.setWorkingDirectory(dir.absolutePath());
+    auto response = proc.run("meson", {"_build"});
+    if (response.exitCode!=0) {
+        ProjectExplorer::TaskHub::addTask(ProjectExplorer::Task::Error,
+                                          QStringLiteral("Can't create build directory. rc=%1").arg(QString::number(response.exitCode)),
+                                          ProjectExplorer::Constants::TASK_CATEGORY_BUILDSYSTEM);
+        return false;
+    }
+
     return ProjectExplorer::CustomProjectWizard::postGenerateOpen(l, errorMessage);
 }
 
-} // namespace xxxMeson
+}

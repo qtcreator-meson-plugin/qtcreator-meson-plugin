@@ -35,25 +35,6 @@ namespace Utils { class FileWizardPage; }
 
 namespace MesonProjectManager {
 
-class MesonProjectWizardDialog;
-
-class FilesSelectionWizardPage : public QWizardPage
-{
-    Q_OBJECT
-
-public:
-    FilesSelectionWizardPage(MesonProjectWizardDialog *mesonProjectWizard, QWidget *parent = nullptr);
-    bool isComplete() const override;
-    void initializePage() override;
-    void cleanupPage() override;
-    Utils::FileNameList selectedFiles() const;
-    Utils::FileNameList selectedPaths() const;
-
-private:
-    MesonProjectWizardDialog *m_mesonProjectWizardDialog;
-    ProjectExplorer::SelectableFilesWidget *m_filesWidget;
-};
-
 class MesonProjectWizardDialog : public Core::BaseFileWizard
 {
     Q_OBJECT
@@ -63,13 +44,10 @@ public:
 
     QString path() const;
     void setPath(const QString &path);
-    //Utils::FileNameList selectedFiles() const;
-    //Utils::FileNameList selectedPaths() const;
 
     QString projectName() const;
 
     Utils::FileWizardPage *m_firstPage;
-    //FilesSelectionWizardPage *m_secondPage;
 };
 
 class MesonProjectWizard : public Core::BaseFileWizardFactory

@@ -110,7 +110,8 @@ void MesonProject::mesonIntrospectBuildsytemFiles(MesonProjectNode *root)
     if (response.exitCode!=0) {
         ProjectExplorer::TaskHub::addTask(ProjectExplorer::Task::Error,
                                           QStringLiteral("Can't introspect buildsystem-files list. rc=%1").arg(QString::number(response.exitCode)),
-                                          ProjectExplorer::Constants::TASK_CATEGORY_BUILDSYSTEM);
+                                          ProjectExplorer::Constants::TASK_CATEGORY_BUILDSYSTEM,
+                                          cfg->buildDirectory());
         return;
     }
 
@@ -171,7 +172,8 @@ void MesonProject::mesonIntrospectProjectInfo()
     if (response.exitCode!=0) {
         ProjectExplorer::TaskHub::addTask(ProjectExplorer::Task::Error,
                                           QStringLiteral("Can't introspect projectinfo. rc=%1").arg(QString::number(response.exitCode)),
-                                          ProjectExplorer::Constants::TASK_CATEGORY_BUILDSYSTEM);
+                                          ProjectExplorer::Constants::TASK_CATEGORY_BUILDSYSTEM,
+                                          cfg->buildDirectory());
         return;
     }
 
