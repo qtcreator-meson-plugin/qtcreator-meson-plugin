@@ -100,7 +100,13 @@ void MesonProject::refresh()
     for(const auto &fname: extraFiles) {
         if (fname.isEmpty())
             continue;
-        extraFileNode->addNestedNode(new ProjectExplorer::FileNode(Utils::FileName::fromString(fname), ProjectExplorer::FileType::Source, false));
+        extraFileNode->addNestedNode(new ProjectExplorer::FileNode(Utils::FileName::fromString(fname),
+                                                                   ProjectExplorer::FileType::Source, false));
+        const QStringList headers = getAllHeadersFor(fname);
+        for (const QString &header: headers) {
+            extraFileNode->addNestedNode(new ProjectExplorer::FileNode(Utils::FileName::fromString(header),
+                                                                       ProjectExplorer::FileType::Header, false));
+        }
     }
     root->addNode(extraFileNode);
 
@@ -377,6 +383,35 @@ ProjectExplorer::Project::RestoreResult MesonProject::fromMap(const QVariantMap 
     if (result != RestoreResult::Ok)
         return result;
     return RestoreResult::Ok;
+}
+
+QStringList getAllHeadersFor(const QString &fname)
+{
+    QStringList out;
+    const QStringList *exts;
+    QString base = "";
+    static const QStringList cppExts = {".h", "_p.h", ".hpp", ".hh"};
+    static const QStringList cExts = {".h"};
+    if (fname.endsWith(".cpp")) {
+        exts = &cppExts;
+        base = fname;
+        base.chop(4);
+    } else if (fname.endsWith(".c")) {
+        exts = &cExts;
+        base = fname;
+        base.chop(2);
+    }
+    if (!base.isEmpty()) {
+        for (const QString &ext: *exts) {
+            QString maybeHeader = base;
+            maybeHeader.append(ext);
+
+            if (QFile::exists(maybeHeader)) {
+                out.append(maybeHeader);
+            }
+        }
+    }
+    return out;
 }
 
 }

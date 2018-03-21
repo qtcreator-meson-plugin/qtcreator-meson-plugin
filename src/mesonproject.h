@@ -62,4 +62,6 @@ public slots:
     void refresh();
 };
 
+QStringList getAllHeadersFor(const QString &fname);
+
 }

@@ -36,6 +36,16 @@ MesonProjectPartManager::MesonProjectPartManager(ProjectExplorer::FolderNode *no
                 return node;
             });
             project->filesInEditableGroups.insert(fname);
+
+            const QStringList headers = getAllHeadersFor(fname);
+            for(const QString &header: headers) {
+                listNode->addNestedNode(new ProjectExplorer::FileNode(Utils::FileName::fromString(header), ProjectExplorer::FileType::Header, false),
+                {}, [](const Utils::FileName &fn) {
+                    ProjectExplorer::FolderNode *node = new MesonFileSubFolderNode(fn);
+                    node->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_ui.png"));
+                    return node;
+                });
+            }
         }
         node->addNode(listNode);
     }
