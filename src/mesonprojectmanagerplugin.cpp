@@ -4,7 +4,7 @@
 #include "ninjamakestep.h"
 #include "mesonbuildconfiguration.h"
 #include "mesonproject.h"
-#include "../mesonprojectwizard.h"
+#include "mesonprojectwizard.h"
 
 #include <coreplugin/fileiconprovider.h>
 

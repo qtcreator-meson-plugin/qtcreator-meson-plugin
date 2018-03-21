@@ -25,35 +25,36 @@
 
 #include "mesonprojectwizard.h"
 
+#include "constants.h"
+#include "mesonbuildconfiguration.h"
+#include "mesonbuildinfo.h"
+#include "mesonproject.h"
+
 #include <coreplugin/icore.h>
-#include <projectexplorer/projectexplorerconstants.h>
+
 #include <projectexplorer/customwizard/customwizard.h>
-#include <projectexplorer/taskhub.h>
-#include <projectexplorer/task.h>
 #include <projectexplorer/kitmanager.h>
+#include <projectexplorer/projectexplorerconstants.h>
 #include <projectexplorer/target.h>
+#include <projectexplorer/task.h>
+#include <projectexplorer/taskhub.h>
 
 #include <utils/algorithm.h>
+#include <utils/environment.h>
 #include <utils/fileutils.h>
 #include <utils/filewizardpage.h>
 #include <utils/mimetypes/mimedatabase.h>
 #include <utils/synchronousprocess.h>
-#include <utils/environment.h>
 
 #include <QApplication>
 #include <QDebug>
 #include <QDir>
 #include <QFileInfo>
+#include <QMessageBox>
 #include <QPainter>
 #include <QPixmap>
 #include <QStyle>
 #include <QVBoxLayout>
-#include <QMessageBox>
-
-#include "src/constants.h"
-#include "src/mesonbuildconfiguration.h"
-#include "src/mesonbuildinfo.h"
-#include "src/mesonproject.h"
 
 namespace MesonProjectManager {
 
