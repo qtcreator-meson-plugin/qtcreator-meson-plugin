@@ -30,12 +30,15 @@
 #include <projectexplorer/customwizard/customwizard.h>
 #include <projectexplorer/taskhub.h>
 #include <projectexplorer/task.h>
+#include <projectexplorer/kitmanager.h>
+#include <projectexplorer/target.h>
 
 #include <utils/algorithm.h>
 #include <utils/fileutils.h>
 #include <utils/filewizardpage.h>
 #include <utils/mimetypes/mimedatabase.h>
 #include <utils/synchronousprocess.h>
+#include <utils/environment.h>
 
 #include <QApplication>
 #include <QDebug>
@@ -47,6 +50,9 @@
 #include <QVBoxLayout>
 
 #include "src/constants.h"
+#include "src/mesonbuildconfiguration.h"
+#include "src/mesonbuildinfo.h"
+#include "src/mesonproject.h"
 
 namespace MesonProjectManager {
 
@@ -135,7 +141,7 @@ test('basic', exe))");
     Core::GeneratedFile cppFile(cppFileName);
     cppFile.setContents(R"(#include <iostream>
 
-int main(int argv, char *argv[]) {
+int main(int argc, char *argv[]) {
     std::cout<<"Hello World!"<<std::endl;
     return 0;
 })");
@@ -151,6 +157,17 @@ bool MesonProjectWizard::postGenerateFiles(const QWizard *w, const Core::Generat
 {
     Q_UNUSED(w);
 
+    Utils::FileName mesonBin = Utils::Environment::systemEnvironment().searchInPath("meson.py");
+    if (mesonBin.isEmpty()) {
+        mesonBin = Utils::Environment::systemEnvironment().searchInPath("meson");
+        if (mesonBin.isEmpty()) {
+            ProjectExplorer::TaskHub::addTask(ProjectExplorer::Task::Error,
+                                              QStringLiteral("Meson execuatble not found in PATH"),
+                                              ProjectExplorer::Constants::TASK_CATEGORY_BUILDSYSTEM);
+            return false;
+        }
+    }
+
     const MesonProjectWizardDialog *wizard = qobject_cast<const MesonProjectWizardDialog *>(w);
     const QString projectPath = wizard->path();
     const QString projectName = wizard->projectName();
@@ -158,15 +175,34 @@ bool MesonProjectWizard::postGenerateFiles(const QWizard *w, const Core::Generat
     safeProjectName.replace(' ', '_');
     const QDir dir(projectPath+"/"+safeProjectName);
 
-    // TODO: Manually construct project, add build configuration, save .user file, discard project.
     Utils::SynchronousProcess proc;
     proc.setWorkingDirectory(dir.absolutePath());
-    auto response = proc.run("meson", {"_build"});
+    auto response = proc.run(mesonBin.toString(), {"_build"});
     if (response.exitCode!=0) {
         ProjectExplorer::TaskHub::addTask(ProjectExplorer::Task::Error,
                                           QStringLiteral("Can't create build directory. rc=%1").arg(QString::number(response.exitCode)),
                                           ProjectExplorer::Constants::TASK_CATEGORY_BUILDSYSTEM);
         return false;
+    }
+
+    {
+        MesonProject proj(Utils::FileName::fromString(l.first().path()));
+        ProjectExplorer::Kit *kit = ProjectExplorer::KitManager::instance()->defaultKit();
+        ProjectExplorer::Target *target = proj.createTarget(kit);
+        MesonBuildConfigurationFactory factory;
+
+        MesonBuildInfo buildInfo(&factory);
+        buildInfo.buildDirectory = Utils::FileName::fromString(dir.absoluteFilePath("_build"));
+        buildInfo.displayName = "Default";
+        buildInfo.kitId = kit->id();
+        buildInfo.typeName = buildInfo.displayName;
+        buildInfo.mesonPath = mesonBin.toString();
+
+        ProjectExplorer::BuildConfiguration *cfg = factory.create(target, &buildInfo);
+        target->addBuildConfiguration(cfg);
+
+        proj.addTarget(target);
+        proj.saveSettings();
     }
 
     return ProjectExplorer::CustomProjectWizard::postGenerateOpen(l, errorMessage);
