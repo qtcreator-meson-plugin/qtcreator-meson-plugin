@@ -48,6 +48,7 @@
 #include <QPixmap>
 #include <QStyle>
 #include <QVBoxLayout>
+#include <QMessageBox>
 
 #include "src/constants.h"
 #include "src/mesonbuildconfiguration.h"
@@ -82,6 +83,18 @@ void MesonProjectWizardDialog::setPath(const QString &path)
 QString MesonProjectWizardDialog::projectName() const
 {
     return m_firstPage->fileName();
+}
+
+bool MesonProjectWizardDialog::validateCurrentPage()
+{
+    if (!Core::BaseFileWizard::validateCurrentPage())
+        return false;
+    if (m_firstPage->fileName().startsWith("meson-")) {
+        QMessageBox::warning(this, tr("Invalid project name"),
+                             tr("Names of Meson targets may not start with \"meson-\" as they are reserved for internal use."));
+        return false;
+    }
+    return true;
 }
 
 MesonProjectWizard::MesonProjectWizard()

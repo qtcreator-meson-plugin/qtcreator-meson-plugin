@@ -48,6 +48,8 @@ public:
     QString projectName() const;
 
     Utils::FileWizardPage *m_firstPage;
+
+    bool validateCurrentPage() override;
 };
 
 class MesonProjectWizard : public Core::BaseFileWizardFactory
