@@ -14,8 +14,7 @@ namespace MesonProjectManager {
 MesonProjectPartManager::MesonProjectPartManager(ProjectExplorer::FolderNode *node, MesonProject *project, const Utils::FileName &filename)
     : project(project)
 {
-    meson_build = std::make_unique<ProjectExplorer::ProjectDocument>(MesonProjectManager::PROJECT_MIMETYPE, filename, [project]
-    {
+    meson_build = std::make_unique<ProjectExplorer::ProjectDocument>(MesonProjectManager::PROJECT_MIMETYPE, filename, [project] {
         project->refresh();
     });
 
@@ -29,14 +28,14 @@ MesonProjectPartManager::MesonProjectPartManager(ProjectExplorer::FolderNode *no
         auto listNode = new FileListNode(this, &parser->fileList(listName), Utils::FileName::fromString(parser->getProject_base()),1);
         listNode->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_ui.png"));
         listNode->setDisplayName(listName);
-        for(const auto &fname: parser->fileListAbsolute(listName))
-        {
+        for(const auto &fname: parser->fileListAbsolute(listName)) {
             listNode->addNestedNode(new ProjectExplorer::FileNode(Utils::FileName::fromString(fname), ProjectExplorer::FileType::Source, false),
             {}, [](const Utils::FileName &fn) {
                 ProjectExplorer::FolderNode *node = new MesonFileSubFolderNode(fn);
                 node->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_ui.png"));
                 return node;
             });
+            project->filesInEditableGroups.insert(fname);
         }
         node->addNode(listNode);
     }

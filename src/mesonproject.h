@@ -49,6 +49,8 @@ public:
 
     void refreshCppCodeModel(const QHash<CompileCommandInfo, QStringList> &);
 
+    QSet<QString> filesInEditableGroups;
+
 private:
     const Utils::FileName filename;
     CppTools::CppProjectUpdater *cppCodeModelUpdater = nullptr;

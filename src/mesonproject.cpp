@@ -88,6 +88,22 @@ void MesonProject::refresh()
     auto codeModelInfo = parseCompileCommands();
     refreshCppCodeModel(codeModelInfo);
 
+    QSet<QString> allFiles;
+    for (const QStringList &list: codeModelInfo.values()) {
+        allFiles += QSet<QString>::fromList(list);
+    }
+    const QSet<QString> extraFiles = allFiles - filesInEditableGroups;
+
+    const Utils::FileName projectBase = filename.parentDir();
+    auto extraFileNode = new ProjectExplorer::VirtualFolderNode(projectBase, 0);
+    extraFileNode->setDisplayName("Extra Files");
+    for(const auto &fname: extraFiles) {
+        if (fname.isEmpty())
+            continue;
+        extraFileNode->addNestedNode(new ProjectExplorer::FileNode(Utils::FileName::fromString(fname), ProjectExplorer::FileType::Source, false));
+    }
+    root->addNode(extraFileNode);
+
     emitParsingFinished(true);
 }
 
