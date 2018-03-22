@@ -6,9 +6,10 @@
 #include "mesonprojectimporter.h"
 
 #include <coreplugin/documentmanager.h>
+#include <coreplugin/fileiconprovider.h>
 #include <coreplugin/icontext.h>
 #include <coreplugin/icore.h>
-#include <coreplugin/fileiconprovider.h>
+#include <coreplugin/messagemanager.h>
 
 #include <cpptools/cpptoolsconstants.h>
 #include <cpptools/cppmodelmanager.h>
@@ -139,6 +140,8 @@ void MesonProject::mesonIntrospectBuildsytemFiles(MesonProjectNode *root)
 
     ProjectExplorer::FolderNode *subprojects = nullptr;
 
+    QMap<QString, MesonFileNode*> subdirectories;
+
     QJsonArray json = QJsonDocument::fromJson(response.allRawOutput()).array();
     for (QJsonValue v: json) {
         QString file = v.toString();
@@ -146,6 +149,18 @@ void MesonProject::mesonIntrospectBuildsytemFiles(MesonProjectNode *root)
 
         ProjectExplorer::FolderNode *baseNode = root;
         Utils::FileName fn = Utils::FileName::fromString(filename.parentDir().appendPath(file).toString());
+        QString dn = file;
+
+        int longestMatch = 0;
+        for (QString subdir : subdirectories.keys()) {
+            if (file.startsWith(subdir)) {
+                baseNode = subdirectories[subdir];
+                longestMatch = subdir.size();
+            }
+        }
+        if (longestMatch) {
+            dn = dn.mid(longestMatch);
+        }
 
         if (file.startsWith("subprojects/")) {
             if (!subprojects) {
@@ -154,16 +169,18 @@ void MesonProject::mesonIntrospectBuildsytemFiles(MesonProjectNode *root)
                 subprojects->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_qt.png"));
                 root->addNode(subprojects);
             }
-            baseNode = subprojects;
+            if (baseNode == root) {
+                baseNode = subprojects;
+                dn = dn.mid(12);
+            }
         }
 
         if (file.endsWith("/meson.build")) {
+            dn = dn.mid(0, dn.size() - 12);
             auto mfn = new MesonFileNode(this, fn);
-            QString dn = file.mid(0, file.size() - 12);
-            if (dn.startsWith("subprojects/"))
-                dn = dn.mid(12);
             mfn->setDisplayName(dn);
             baseNode->addNode(mfn);
+            subdirectories[file.mid(0, file.size() - 11)] = mfn;
         } else {
             baseNode->addNestedNode(new ProjectExplorer::FileNode(fn, ProjectExplorer::FileType::Project, false),
             {}, [](const Utils::FileName &fn) {
