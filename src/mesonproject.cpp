@@ -71,6 +71,21 @@ MesonProject::~MesonProject()
     delete cppCodeModelUpdater;
 }
 
+MesonBuildConfiguration *MesonProject::activeBuildConfiguration()
+{
+    ProjectExplorer::Target *active = activeTarget();
+    if (!active)
+        return nullptr;
+
+    ProjectExplorer::BuildConfiguration *bc = active->activeBuildConfiguration();
+    if (!bc)
+        return nullptr;
+
+    MesonBuildConfiguration *cfg = qobject_cast<MesonBuildConfiguration*>(bc);
+
+    return cfg;
+}
+
 void MesonProject::refresh()
 {
     if (isParsing()) {
@@ -78,63 +93,62 @@ void MesonProject::refresh()
         return;
     }
     emitParsingStarted();
+
+    MesonBuildConfiguration *cfg = activeBuildConfiguration();
+
     // Stuff stolen from genericproject::refresh
     auto root = new MesonProjectNode(this, filename);
 
-    mesonIntrospectBuildsytemFiles(root);
+    if (cfg) {
+        // TODO: fall back to just scan sub directories for meson files if !cfg?
+        mesonIntrospectBuildsytemFiles(*cfg, root);
+    }
 
     setRootProjectNode(root);
 
-    mesonIntrospectProjectInfo();
-    auto codeModelInfo = parseCompileCommands();
-    refreshCppCodeModel(codeModelInfo);
+    QHash<CompileCommandInfo, QStringList> codeModelInfo;
+    if (cfg) {
+        mesonIntrospectProjectInfo(*cfg);
+        codeModelInfo = parseCompileCommands(*cfg);
 
-    QSet<QString> allFiles;
-    for (const QStringList &list: codeModelInfo.values()) {
-        allFiles += QSet<QString>::fromList(list);
-    }
-    const QSet<QString> extraFiles = allFiles - filesInEditableGroups;
-
-    const Utils::FileName projectBase = filename.parentDir();
-    auto extraFileNode = new ProjectExplorer::VirtualFolderNode(projectBase, 0);
-    extraFileNode->setDisplayName("Extra Files");
-    for(const auto &fname: extraFiles) {
-        if (fname.isEmpty())
-            continue;
-        extraFileNode->addNestedNode(new ProjectExplorer::FileNode(Utils::FileName::fromString(fname),
-                                                                   ProjectExplorer::FileType::Source, false));
-        const QStringList headers = getAllHeadersFor(fname);
-        for (const QString &header: headers) {
-            extraFileNode->addNestedNode(new ProjectExplorer::FileNode(Utils::FileName::fromString(header),
-                                                                       ProjectExplorer::FileType::Header, false));
+        QSet<QString> allFiles;
+        for (const QStringList &list: codeModelInfo.values()) {
+            allFiles += QSet<QString>::fromList(list);
         }
+        const QSet<QString> extraFiles = allFiles - filesInEditableGroups;
+
+        const Utils::FileName projectBase = filename.parentDir();
+        auto extraFileNode = new ProjectExplorer::VirtualFolderNode(projectBase, 0);
+        extraFileNode->setDisplayName("Extra Files");
+        for(const auto &fname: extraFiles) {
+            if (fname.isEmpty())
+                continue;
+            extraFileNode->addNestedNode(new ProjectExplorer::FileNode(Utils::FileName::fromString(fname),
+                                                                       ProjectExplorer::FileType::Source, false));
+            const QStringList headers = getAllHeadersFor(fname);
+            for (const QString &header: headers) {
+                extraFileNode->addNestedNode(new ProjectExplorer::FileNode(Utils::FileName::fromString(header),
+                                                                           ProjectExplorer::FileType::Header, false));
+            }
+        }
+        root->addNode(extraFileNode);
     }
-    root->addNode(extraFileNode);
+    refreshCppCodeModel(codeModelInfo);
 
     emitParsingFinished(true);
 }
 
-void MesonProject::mesonIntrospectBuildsytemFiles(MesonProjectNode *root)
+void MesonProject::mesonIntrospectBuildsytemFiles(const MesonBuildConfiguration &cfg, MesonProjectNode *root)
 {
-    ProjectExplorer::Target *active = activeTarget();
-    if (!active)
-        return;
-
-    ProjectExplorer::BuildConfiguration *bc = active->activeBuildConfiguration();
-    if (!bc)
-        return;
-
-    MesonBuildConfiguration *cfg = qobject_cast<MesonBuildConfiguration*>(bc);
-    if (!cfg)
-        return;
-
     Utils::SynchronousProcess proc;
-    auto response = proc.run(cfg->mesonPath(), {"introspect", cfg->buildDirectory().toString(), "--buildsystem-files"});
+    auto response = proc.run(cfg.mesonPath(), {"introspect", cfg.buildDirectory().toString(), "--buildsystem-files"});
     if (response.exitCode!=0) {
         ProjectExplorer::TaskHub::addTask(ProjectExplorer::Task::Error,
                                           QStringLiteral("Can't introspect buildsystem-files list. rc=%1").arg(QString::number(response.exitCode)),
                                           ProjectExplorer::Constants::TASK_CATEGORY_BUILDSYSTEM,
-                                          cfg->buildDirectory());
+                                          cfg.buildDirectory());
+
+        Core::MessageManager::write(response.allOutput());
         return;
     }
 
@@ -192,27 +206,15 @@ void MesonProject::mesonIntrospectBuildsytemFiles(MesonProjectNode *root)
     }
 }
 
-void MesonProject::mesonIntrospectProjectInfo()
+void MesonProject::mesonIntrospectProjectInfo(const MesonBuildConfiguration &cfg)
 {
-    ProjectExplorer::Target *active = activeTarget();
-    if (!active)
-        return;
-
-    ProjectExplorer::BuildConfiguration *bc = active->activeBuildConfiguration();
-    if (!bc)
-        return;
-
-    MesonBuildConfiguration *cfg = qobject_cast<MesonBuildConfiguration*>(bc);
-    if (!cfg)
-        return;
-
     Utils::SynchronousProcess proc;
-    auto response = proc.run(cfg->mesonPath(), {"introspect", cfg->buildDirectory().toString(), "--projectinfo"});
+    auto response = proc.run(cfg.mesonPath(), {"introspect", cfg.buildDirectory().toString(), "--projectinfo"});
     if (response.exitCode!=0) {
         ProjectExplorer::TaskHub::addTask(ProjectExplorer::Task::Error,
                                           QStringLiteral("Can't introspect projectinfo. rc=%1").arg(QString::number(response.exitCode)),
                                           ProjectExplorer::Constants::TASK_CATEGORY_BUILDSYSTEM,
-                                          cfg->buildDirectory());
+                                          cfg.buildDirectory());
         return;
     }
 
@@ -222,23 +224,11 @@ void MesonProject::mesonIntrospectProjectInfo()
     }
 }
 
-const QHash<CompileCommandInfo, QStringList> MesonProject::parseCompileCommands() const
+const QHash<CompileCommandInfo, QStringList> MesonProject::parseCompileCommands(const MesonBuildConfiguration &cfg) const
 {
-    ProjectExplorer::Target *active = activeTarget();
-    if (!active)
-        return {};
-
-    ProjectExplorer::BuildConfiguration *bc = active->activeBuildConfiguration();
-    if (!bc)
-        return {};
-
-    MesonBuildConfiguration *cfg = qobject_cast<MesonBuildConfiguration*>(bc);
-    if (!cfg)
-        return {};
-
     QHash<CompileCommandInfo, QStringList> fileCodeCompletionHints;
 
-    Utils::FileName compileCommandsFileName = cfg->buildDirectory().appendPath("compile_commands.json");
+    Utils::FileName compileCommandsFileName = cfg.buildDirectory().appendPath("compile_commands.json");
     QFile compileCommandsFile(compileCommandsFileName.toString());
     if (!compileCommandsFile.open(QIODevice::ReadOnly | QIODevice::Text))
         return {};

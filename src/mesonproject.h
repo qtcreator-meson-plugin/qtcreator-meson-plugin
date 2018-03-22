@@ -2,6 +2,7 @@
 
 #include "mesonbuildfileparser.h"
 #include "mesonprojectnode.h"
+#include "mesonbuildconfiguration.h"
 
 #include <cpptools/cppprojectupdater.h>
 
@@ -43,15 +44,16 @@ public:
     bool requiresTargetPanel() const override;
     ProjectExplorer::ProjectImporter *projectImporter() const override;
 
-    void mesonIntrospectBuildsytemFiles(MesonProjectNode *root);
-    void mesonIntrospectProjectInfo();
-    const QHash<CompileCommandInfo, QStringList> parseCompileCommands() const;
+    void mesonIntrospectBuildsytemFiles(const MesonBuildConfiguration &cfg, MesonProjectNode *root);
+    void mesonIntrospectProjectInfo(const MesonBuildConfiguration &cfg);
+    const QHash<CompileCommandInfo, QStringList> parseCompileCommands(const MesonBuildConfiguration &cfg) const;
 
     void refreshCppCodeModel(const QHash<CompileCommandInfo, QStringList> &);
 
     QSet<QString> filesInEditableGroups;
 
 private:
+    MesonBuildConfiguration *activeBuildConfiguration();
     const Utils::FileName filename;
     CppTools::CppProjectUpdater *cppCodeModelUpdater = nullptr;
 
