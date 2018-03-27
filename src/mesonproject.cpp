@@ -151,6 +151,17 @@ void MesonProject::refresh()
     emitParsingFinished(true);
 }
 
+class SubProjectsNode : public ProjectExplorer::FolderNode
+{
+public:
+    explicit SubProjectsNode(const Utils::FileName &folderPath, ProjectExplorer::NodeType nodeType = ProjectExplorer::NodeType::Folder,
+                        const QString &displayName = QString(), const QByteArray &id = {}) :
+        ProjectExplorer::FolderNode(folderPath, nodeType, displayName, id)
+    {
+        setPriority(-100000);
+    }
+};
+
 void MesonProject::mesonIntrospectBuildsytemFiles(const MesonBuildConfiguration &cfg, MesonProjectNode *root)
 {
     Utils::SynchronousProcess proc;
@@ -194,7 +205,7 @@ void MesonProject::mesonIntrospectBuildsytemFiles(const MesonBuildConfiguration 
         if (file.startsWith("subprojects/")) {
             if (!subprojects) {
                 Utils::FileName fnSubprojects = Utils::FileName::fromString(filename.parentDir().appendPath("subprojects").toString());
-                subprojects = new ProjectExplorer::FolderNode(fnSubprojects, ProjectExplorer::NodeType::Folder, "subprojects");
+                subprojects = new SubProjectsNode(fnSubprojects, ProjectExplorer::NodeType::Folder, "subprojects");
                 subprojects->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_qt.png"));
                 root->addNode(subprojects);
             }
