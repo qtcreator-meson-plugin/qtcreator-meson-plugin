@@ -24,6 +24,7 @@ public:
     QMap<QString, QString> defines;
     QStringList includes;
     QString cpp_std;
+    QString id;
 
     bool operator==(const CompileCommandInfo &o) const;
 };

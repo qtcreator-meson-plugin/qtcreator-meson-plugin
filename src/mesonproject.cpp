@@ -50,7 +50,7 @@ quint64 qHash(const CompileCommandInfo &info)
 
 bool CompileCommandInfo::operator==(const CompileCommandInfo &o) const
 {
-    return std::tie(defines, includes, cpp_std) == std::tie(o.defines, o.includes, o.cpp_std);
+    return std::tie(defines, includes, cpp_std, id) == std::tie(o.defines, o.includes, o.cpp_std, id);
 }
 
 MesonProject::MesonProject(const Utils::FileName &filename):
@@ -270,6 +270,8 @@ const QHash<CompileCommandInfo, QStringList> MesonProject::parseCompileCommands(
         CompileCommandInfo info;
         info.includes.append("/usr/include/");
 
+        bool nextIsOutput = false;
+
         for (const QString &part: parts) {
             /*
             "c++  -Irule_system@exe -I. -I.. -I../ChaiScript-6.0.0/include -fdiagnostics-color=always
@@ -277,6 +279,19 @@ const QHash<CompileCommandInfo, QStringList> MesonProject::parseCompileCommands(
             -MMD -MQ 'rule_system@exe/main.cpp.o' -MF 'rule_system@exe/main.cpp.o.d'
             -o 'rule_system@exe/main.cpp.o' -c ../main.cpp"
             */
+
+            if (nextIsOutput) {
+                QStringList pp = part.split('/');
+                for (const QString &p: pp) {
+                    if (p.contains('@')) {
+                        info.id = p;
+                        break;
+                    }
+                }
+                nextIsOutput = false;
+                continue;
+            }
+
             if (!part.startsWith("-"))
                 continue;
 
@@ -295,6 +310,8 @@ const QHash<CompileCommandInfo, QStringList> MesonProject::parseCompileCommands(
                 info.includes.append(idir);
             } else if (part.startsWith("-std")) {
                 info.cpp_std = part.mid(5);
+            } else if (part == "-o") {
+                nextIsOutput = true;
             }
         }
 
@@ -360,7 +377,7 @@ void MesonProject::refreshCppCodeModel(const QHash<CompileCommandInfo, QStringLi
         const QStringList &files = fileCodeCompletionHints.value(info);
 
         CppTools::RawProjectPart rpp;
-        rpp.setDisplayName(QStringLiteral("Part #%1").arg(QString::number(i)));
+        rpp.setDisplayName(info.id + QStringLiteral(" Part %1").arg(QString::number(i)));
         rpp.setProjectFileLocation(projectFilePath().toString());
         rpp.setQtVersion(activeQtVersion);
         rpp.setIncludePaths(info.includes);
