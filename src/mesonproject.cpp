@@ -144,7 +144,8 @@ void MesonProject::mesonIntrospectBuildsytemFiles(const MesonBuildConfiguration 
     auto response = proc.run(cfg.mesonPath(), {"introspect", cfg.buildDirectory().toString(), "--buildsystem-files"});
     if (response.exitCode!=0) {
         ProjectExplorer::TaskHub::addTask(ProjectExplorer::Task::Error,
-                                          QStringLiteral("Can't introspect buildsystem-files list. rc=%1").arg(QString::number(response.exitCode)),
+                                          QStringLiteral("Can't introspect buildsystem-files list. %1")
+                                          .arg(response.exitMessage(cfg.mesonPath(), proc.timeoutS())),
                                           ProjectExplorer::Constants::TASK_CATEGORY_BUILDSYSTEM,
                                           cfg.buildDirectory());
 
@@ -212,9 +213,12 @@ void MesonProject::mesonIntrospectProjectInfo(const MesonBuildConfiguration &cfg
     auto response = proc.run(cfg.mesonPath(), {"introspect", cfg.buildDirectory().toString(), "--projectinfo"});
     if (response.exitCode!=0) {
         ProjectExplorer::TaskHub::addTask(ProjectExplorer::Task::Error,
-                                          QStringLiteral("Can't introspect projectinfo. rc=%1").arg(QString::number(response.exitCode)),
+                                          QStringLiteral("Can't introspect projectinfo. %1")
+                                          .arg(response.exitMessage(cfg.mesonPath(), proc.timeoutS())),
                                           ProjectExplorer::Constants::TASK_CATEGORY_BUILDSYSTEM,
                                           cfg.buildDirectory());
+
+        Core::MessageManager::write(response.allOutput());
         return;
     }
 
