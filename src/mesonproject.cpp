@@ -104,8 +104,6 @@ void MesonProject::refresh()
         mesonIntrospectBuildsytemFiles(*cfg, root);
     }
 
-    setRootProjectNode(root);
-
     QHash<CompileCommandInfo, QStringList> codeModelInfo;
     if (cfg) {
         mesonIntrospectProjectInfo(*cfg);
@@ -118,21 +116,36 @@ void MesonProject::refresh()
         const QSet<QString> extraFiles = allFiles - filesInEditableGroups;
 
         const Utils::FileName projectBase = filename.parentDir();
+        QString buildDirectory = cfg->buildDirectory().toString();
+        if (!buildDirectory.endsWith('/')) buildDirectory += "/";
         auto extraFileNode = new ProjectExplorer::VirtualFolderNode(projectBase, 0);
         extraFileNode->setDisplayName("Extra Files");
+        auto generatedFileNode = new ProjectExplorer::VirtualFolderNode(cfg->buildDirectory(), 0);
+        generatedFileNode->setDisplayName("Generated Files");
         for(const auto &fname: extraFiles) {
             if (fname.isEmpty())
                 continue;
-            extraFileNode->addNestedNode(new ProjectExplorer::FileNode(Utils::FileName::fromString(fname),
-                                                                       ProjectExplorer::FileType::Source, false));
+
+            ProjectExplorer::VirtualFolderNode *node = extraFileNode;
+            bool generated = false;
+            if (fname.startsWith(buildDirectory)) {
+                node = generatedFileNode;
+                generated = true;
+            }
+
+            node->addNestedNode(new ProjectExplorer::FileNode(Utils::FileName::fromString(fname),
+                                                                       ProjectExplorer::FileType::Source, generated));
             const QStringList headers = getAllHeadersFor(fname);
             for (const QString &header: headers) {
-                extraFileNode->addNestedNode(new ProjectExplorer::FileNode(Utils::FileName::fromString(header),
-                                                                           ProjectExplorer::FileType::Header, false));
+                node->addNestedNode(new ProjectExplorer::FileNode(Utils::FileName::fromString(header),
+                                                                           ProjectExplorer::FileType::Header, generated));
             }
         }
         root->addNode(extraFileNode);
+        root->addNode(generatedFileNode);
     }
+    setRootProjectNode(root);
+
     refreshCppCodeModel(codeModelInfo);
 
     emitParsingFinished(true);
