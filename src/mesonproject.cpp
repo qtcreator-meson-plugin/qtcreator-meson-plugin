@@ -141,6 +141,7 @@ void MesonProject::refresh()
 void MesonProject::mesonIntrospectBuildsytemFiles(const MesonBuildConfiguration &cfg, MesonProjectNode *root)
 {
     Utils::SynchronousProcess proc;
+    proc.setTimeoutS(100);
     auto response = proc.run(cfg.mesonPath(), {"introspect", cfg.buildDirectory().toString(), "--buildsystem-files"});
     if (response.exitCode!=0) {
         ProjectExplorer::TaskHub::addTask(ProjectExplorer::Task::Error,
@@ -210,6 +211,7 @@ void MesonProject::mesonIntrospectBuildsytemFiles(const MesonBuildConfiguration 
 void MesonProject::mesonIntrospectProjectInfo(const MesonBuildConfiguration &cfg)
 {
     Utils::SynchronousProcess proc;
+    proc.setTimeoutS(100);
     auto response = proc.run(cfg.mesonPath(), {"introspect", cfg.buildDirectory().toString(), "--projectinfo"});
     if (response.exitCode!=0) {
         ProjectExplorer::TaskHub::addTask(ProjectExplorer::Task::Error,
