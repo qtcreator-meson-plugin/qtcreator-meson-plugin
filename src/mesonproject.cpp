@@ -411,7 +411,6 @@ void MesonProject::refreshCppCodeModel(const QHash<CompileCommandInfo, QStringLi
         rpp.setProjectFileLocation(projectFilePath().toString());
         rpp.setQtVersion(activeQtVersion);
         rpp.setIncludePaths(info.includes);
-        //rpp.setConfigFileName("???"); // TODO: This can read a file and convert the contents to macro definitions. Do we need/want this?
         QVector<ProjectExplorer::Macro> macros;
         for (const auto &key: info.defines.keys())
             macros.append(ProjectExplorer::Macro(key.toUtf8(), info.defines[key].toUtf8()));
