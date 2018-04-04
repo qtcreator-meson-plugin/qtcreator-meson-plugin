@@ -79,3 +79,7 @@ include($$IDE_SOURCE_TREE/src/qtcreatorplugin.pri)
 
 RESOURCES += \
     resources.qrc
+
+DISTFILES += \
+    LICENSE.txt \
+    README.md
