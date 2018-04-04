@@ -52,7 +52,7 @@ void NinjaMakeStep::ctor(ProjectExplorer::BuildStepList *bsl)
     }
 }
 
-bool NinjaMakeStep::init(QList<const ProjectExplorer::BuildStep *> &earlierSteps)
+bool NinjaMakeStep::setupPP(ProjectExplorer::ProcessParameters &pp)
 {
     ProjectExplorer::BuildConfiguration *bc = buildConfiguration();
     if (!bc)
@@ -69,15 +69,22 @@ bool NinjaMakeStep::init(QList<const ProjectExplorer::BuildStep *> &earlierSteps
         return false;
     }
 
-    ProjectExplorer::ProcessParameters *pp = processParameters();
-    pp->setMacroExpander(bc->macroExpander());
-    pp->setWorkingDirectory(bc->buildDirectory().toString());
+    pp.setMacroExpander(bc->macroExpander());
+    pp.setWorkingDirectory(bc->buildDirectory().toString());
     Utils::Environment env = bc->environment();
     Utils::Environment::setupEnglishOutput(&env);
-    pp->setEnvironment(env);
-    pp->setCommand(ninjaCommand(bc->environment()));
-    pp->setArguments(allArguments());
-    pp->resolveAll();
+    pp.setEnvironment(env);
+    pp.setCommand(ninjaCommand(bc->environment()));
+    pp.setArguments(allArguments());
+    pp.resolveAll();
+    return true;
+}
+
+bool NinjaMakeStep::init(QList<const ProjectExplorer::BuildStep *> &earlierSteps)
+{
+    ProjectExplorer::ProcessParameters *pp = processParameters();
+    if(!setupPP(*pp))
+        return false;
 
     setIgnoreReturnValue(m_buildTargets == QStringList{ "clean" });
 
@@ -98,6 +105,13 @@ QVariantMap NinjaMakeStep::toMap() const
     map.insert(NINJA_ARGUMENTS_KEY, m_ninjaArguments);
     map.insert(NINJA_COMMAND_KEY, m_ninjaCommand);
     return map;
+}
+
+QString NinjaMakeStep::getSummary()
+{
+    ProjectExplorer::ProcessParameters pp;
+    setupPP(pp);
+    return pp.summary("ninja");
 }
 
 bool NinjaMakeStep::fromMap(const QVariantMap &map)

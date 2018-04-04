@@ -2,6 +2,10 @@
 
 #include "ninjamakestep.h"
 
+#include <QFormLayout>
+#include <QLineEdit>
+#include <QLabel>
+
 namespace MesonProjectManager {
 
 class NinjaMakeStepConfigWidget : public ProjectExplorer::BuildStepConfigWidget
@@ -13,6 +17,8 @@ public:
 
     QString displayName() const override;
     QString summaryText() const override;
+private:
+    NinjaMakeStep *step;
 };
 
 }

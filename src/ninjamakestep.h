@@ -29,6 +29,8 @@ public:
 
     QVariantMap toMap() const override;
 
+    QString getSummary();
+
 protected:
     NinjaMakeStep(ProjectExplorer::BuildStepList *parent, NinjaMakeStep *bs);
     NinjaMakeStep(ProjectExplorer::BuildStepList *parent, Core::Id id);
@@ -38,6 +40,7 @@ protected:
 
 private:
     void ctor(ProjectExplorer::BuildStepList *bsl);
+    bool setupPP(ProjectExplorer::ProcessParameters &pp);
 
     QStringList m_buildTargets;
     QString m_ninjaArguments;
