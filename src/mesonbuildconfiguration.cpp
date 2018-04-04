@@ -13,9 +13,13 @@
 #include <projectexplorer/projectexplorerconstants.h>
 #include <qtsupport/qtkitinformation.h>
 #include <utils/qtcassert.h>
+#include <utils/pathchooser.h>
 
 #include <QDebug>
 #include <QWidget>
+#include <QLineEdit>
+#include <QLabel>
+#include <QFormLayout>
 
 namespace MesonProjectManager {
 
@@ -26,8 +30,7 @@ MesonBuildConfiguration::MesonBuildConfiguration(ProjectExplorer::Target *parent
 
 ProjectExplorer::NamedWidget *MesonBuildConfiguration::createConfigWidget()
 {
-    auto w = new ProjectExplorer::NamedWidget();
-    //w->setDisplayName(tr("Meson Manager"));
+    auto w = new MesonBuildConfigationWidget(this);
     return w;
 }
 
@@ -185,6 +188,30 @@ ProjectExplorer::BuildConfiguration *MesonBuildConfigurationFactory::clone(Proje
 {
     qDebug()<<__PRETTY_FUNCTION__<<" TODO";
     return nullptr;
+}
+
+MesonBuildConfigationWidget::MesonBuildConfigationWidget(MesonBuildConfiguration *config, QWidget *parent): ProjectExplorer::NamedWidget(parent), config(config)
+{
+    setDisplayName(tr("Meson Project"));
+
+    QFormLayout *layout = new QFormLayout(this);
+    layout->setContentsMargins(0, -1, 0, -1);
+    layout->setFieldGrowthPolicy(QFormLayout::ExpandingFieldsGrow);
+
+    QLineEdit *lineedit_meson_path = new QLineEdit();
+    lineedit_meson_path->setText(config->mesonPath());
+    layout->addRow(new QLabel(tr("Meson Path")), lineedit_meson_path);
+    connect(lineedit_meson_path, &QLineEdit::textChanged, [config](QString text){
+        config->setMesonPath(text);
+    });
+
+    Utils::PathChooser *build_dir = new Utils::PathChooser();
+    build_dir->setPath(config->buildDirectory().toString());
+    layout->addRow(new QLabel(tr("Build Directory")), build_dir);
+    connect(build_dir, &Utils::PathChooser::pathChanged, [config](QString path) {
+        config->setBuildDirectory(Utils::FileName::fromString(path));
+    });
+
 }
 
 }

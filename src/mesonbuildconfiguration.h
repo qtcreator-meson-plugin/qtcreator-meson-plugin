@@ -24,8 +24,18 @@ public:
 
 private:
     QString m_mesonPath;
+
+    friend class MesonBuildConfigationWidget;
 };
 
+class MesonBuildConfigationWidget: public ProjectExplorer::NamedWidget
+{
+    Q_OBJECT
+public:
+    explicit MesonBuildConfigationWidget(MesonBuildConfiguration *config, QWidget *parent=nullptr);
+private:
+    MesonBuildConfiguration *config;
+};
 
 class MesonBuildConfigurationFactory : public ProjectExplorer::IBuildConfigurationFactory
 {
