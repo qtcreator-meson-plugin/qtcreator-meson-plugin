@@ -40,8 +40,7 @@ NinjaMakeStep::NinjaMakeStep(ProjectExplorer::BuildStepList *parent, NinjaMakeSt
 void NinjaMakeStep::ctor(ProjectExplorer::BuildStepList *bsl)
 {
     setDefaultDisplayName("Ninja");
-    m_ninjaProgress = QRegExp("^\\[\\s*(\\d*)/\\s*(\\d*)");
-
+    m_ninjaProgress = QRegExp(R"(^\[\s*([0-9]*)/\s*([0-9]*)\])");
     if (m_buildTargets.isEmpty()) {
         if (bsl->id() == ProjectExplorer::Constants::BUILDSTEPS_CLEAN)
             m_buildTargets.append("clean");
@@ -132,8 +131,8 @@ void NinjaMakeStep::stdOutput(const QString &line)
         if (ok) {
             int all = m_ninjaProgress.cap(2).toInt(&ok);
             if (ok && all != 0) {
-                const int percent = static_cast<int>(100.0 * done/all);
-                futureInterface()->setProgressValue(percent);
+                futureInterface()->setProgressRange(0, all);
+                futureInterface()->setProgressValue(done);
             }
         }
         return;
