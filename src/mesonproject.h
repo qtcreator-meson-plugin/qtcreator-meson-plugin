@@ -37,7 +37,6 @@ public:
     explicit MesonProject(const Utils::FileName &proFile);
     virtual ~MesonProject();
 
-    bool supportsKit(ProjectExplorer::Kit *k, QString *errorMessage) const override;
     bool setupTarget(ProjectExplorer::Target *t);
     QStringList filesGeneratedFrom(const QString &sourceFile) const override;
     bool needsConfiguration() const override;

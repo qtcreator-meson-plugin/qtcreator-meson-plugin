@@ -15,30 +15,10 @@
 
 namespace MesonProjectManager {
 
-NinjaMakeStep::NinjaMakeStep(ProjectExplorer::BuildStepList *parent)
-    : AbstractProcessStep(parent, Core::Id(NINJA_MS_ID))
+NinjaMakeStep::NinjaMakeStep(ProjectExplorer::BuildStepList *bsl, const QString target):
+    AbstractProcessStep(bsl, NINJA_MS_ID)
 {
-    ctor(parent);
-}
-
-NinjaMakeStep::NinjaMakeStep(ProjectExplorer::BuildStepList *parent, const Core::Id id) :
-    AbstractProcessStep(parent, id)
-{
-    ctor(parent);
-}
-
-NinjaMakeStep::NinjaMakeStep(ProjectExplorer::BuildStepList *parent, NinjaMakeStep *bs) :
-    AbstractProcessStep(parent, bs),
-    m_buildTargets(bs->m_buildTargets),
-    m_ninjaArguments(bs->m_ninjaArguments),
-    m_ninjaCommand(bs->m_ninjaCommand)
-{
-    ctor(parent);
-}
-
-
-void NinjaMakeStep::ctor(ProjectExplorer::BuildStepList *bsl)
-{
+    setBuildTarget(target, true);
     setDefaultDisplayName("Ninja");
     m_ninjaProgress = QRegExp(R"(^\[\s*([0-9]*)/\s*([0-9]*)\])");
     if (m_buildTargets.isEmpty()) {
@@ -190,34 +170,30 @@ void NinjaMakeStep::setBuildTarget(const QString &target, bool on)
     m_buildTargets = old;
 }
 
-
-
-NinjaMakeStepFactory::NinjaMakeStepFactory(QObject *parent) :
-    IBuildStepFactory(parent)
+NinjaMakeAllStepFactory::NinjaMakeAllStepFactory(): BuildStepFactory()
 {
+    struct Step : NinjaMakeStep
+    {
+        Step(ProjectExplorer::BuildStepList *bsl) : NinjaMakeStep(bsl, "all") { }
+    };
+
+    registerStep<Step>(NINJA_MS_ID);
+    setDisplayName("Ninja");
+    setSupportedProjectType(MESONPROJECT_ID);
+    setSupportedStepList(ProjectExplorer::Constants::BUILDSTEPS_BUILD);
 }
 
-QList<ProjectExplorer::BuildStepInfo> NinjaMakeStepFactory::availableSteps(ProjectExplorer::BuildStepList *parent) const
+NinjaMakeCleanStepFactory::NinjaMakeCleanStepFactory()
 {
-    if (parent->target()->project()->id() != MESONPROJECT_ID)
-        return {};
+    struct Step : NinjaMakeStep
+    {
+        Step(ProjectExplorer::BuildStepList *bsl) : NinjaMakeStep(bsl, "clean") { }
+    };
 
-    return {{NINJA_MS_ID, "Ninja"}};
+    registerStep<Step>(NINJA_MS_ID);
+    setDisplayName("Ninja");
+    setSupportedProjectType(MESONPROJECT_ID);
+    setSupportedStepList(ProjectExplorer::Constants::BUILDSTEPS_CLEAN);
 }
-
-ProjectExplorer::BuildStep *NinjaMakeStepFactory::create(ProjectExplorer::BuildStepList *parent, Core::Id id)
-{
-    Q_UNUSED(id)
-    auto step = new NinjaMakeStep(parent);
-    return step;
-}
-
-ProjectExplorer::BuildStep *NinjaMakeStepFactory::clone(ProjectExplorer::BuildStepList *parent, ProjectExplorer::BuildStep *source)
-{
-    auto old = qobject_cast<NinjaMakeStep*>(source);
-    Q_ASSERT(old);
-    return new NinjaMakeStep(parent, old);
-}
-
 
 }
