@@ -28,6 +28,19 @@ MesonBuildConfiguration::MesonBuildConfiguration(ProjectExplorer::Target *parent
 {
 }
 
+void MesonBuildConfiguration::initialize(const ProjectExplorer::BuildInfo *info)
+{
+    BuildConfiguration::initialize(info);
+
+    ProjectExplorer::BuildStepList *buildSteps = stepList(ProjectExplorer::Constants::BUILDSTEPS_BUILD);
+    buildSteps->appendStep(new NinjaMakeStep(buildSteps, "all"));
+
+    ProjectExplorer::BuildStepList *cleanSteps = stepList(ProjectExplorer::Constants::BUILDSTEPS_CLEAN);
+    cleanSteps->appendStep(new NinjaMakeStep(cleanSteps, "clean"));
+
+    updateCacheAndEmitEnvironmentChanged();
+}
+
 ProjectExplorer::NamedWidget *MesonBuildConfiguration::createConfigWidget()
 {
     auto w = new MesonBuildConfigationWidget(this);
@@ -66,19 +79,17 @@ void MesonBuildConfiguration::setMesonPath(const QString &mesonPath)
     m_mesonPath = mesonPath;
 }
 
-MesonBuildConfigurationFactory::MesonBuildConfigurationFactory(QObject *parent):
-    IBuildConfigurationFactory(parent)
+MesonBuildConfigurationFactory::MesonBuildConfigurationFactory():
+    IBuildConfigurationFactory()
 {
-}
-
-int MesonBuildConfigurationFactory::priority(const ProjectExplorer::Target *parent) const
-{
-    return correctProject(parent) ? 0 : -1;
+    registerBuildConfiguration<MesonBuildConfiguration>(MESON_BC_ID);
+    setSupportedProjectType(MESONPROJECT_ID);
+    setSupportedProjectMimeTypeName(PROJECT_MIMETYPE);
 }
 
 ProjectExplorer::BuildInfo *MesonBuildConfigurationFactory::createBuildInfo(const ProjectExplorer::Kit *k,
-                                                                                      const QString &projectPath,
-                                                                                      ProjectExplorer::BuildConfiguration::BuildType type) const
+                                                                            const QString &projectPath,
+                                                                            ProjectExplorer::BuildConfiguration::BuildType type) const
 {
     ProjectExplorer::BuildInfo *info = new ProjectExplorer::BuildInfo(this);
     info->displayName = tr("Debug");
@@ -97,25 +108,19 @@ bool MesonBuildConfigurationFactory::correctProject(const ProjectExplorer::Targe
     return qobject_cast<MesonProject*>(parent->project());
 }
 
-
 QList<ProjectExplorer::BuildInfo *> MesonBuildConfigurationFactory::availableBuilds(const ProjectExplorer::Target *parent) const
 {
     QList<ProjectExplorer::BuildInfo *> result;
 
     // These are the options in the add menu of the build settings page.
 
-    /*const QString projectFilePath = parent->project()->projectFilePath().toString();
+    const QString projectFilePath = parent->project()->projectFilePath().toString();
 
     ProjectExplorer::BuildInfo *info = createBuildInfo(parent->kit(), projectFilePath, ProjectExplorer::BuildConfiguration::Debug);
     info->displayName.clear(); // ask for a name
     info->buildDirectory.clear(); // This depends on the displayName
-    result << info;*/
+    result << info;
     return result;
-}
-
-int MesonBuildConfigurationFactory::priority(const ProjectExplorer::Kit *k, const QString &projectPath) const
-{
-    return 0;
 }
 
 QList<ProjectExplorer::BuildInfo *> MesonBuildConfigurationFactory::availableSetups(const ProjectExplorer::Kit *k, const QString &projectPath) const
@@ -129,65 +134,6 @@ QList<ProjectExplorer::BuildInfo *> MesonBuildConfigurationFactory::availableSet
     info->displayName = tr("Default");
     result << info;
     return result;
-}
-
-ProjectExplorer::BuildConfiguration *MesonBuildConfigurationFactory::create(ProjectExplorer::Target *parent, const ProjectExplorer::BuildInfo *info) const
-{
-    QTC_ASSERT(info->factory() == this, return 0);
-    QTC_ASSERT(info->kitId == parent->kit()->id(), return 0);
-    QTC_ASSERT(!info->displayName.isEmpty(), return 0);
-
-    const MesonBuildInfo *mInfo = static_cast<const MesonBuildInfo *>(info);
-
-    auto bc = new MesonBuildConfiguration(parent);
-    bc->setBuildDirectory(info->buildDirectory);
-    bc->setDisplayName(info->displayName);
-    bc->setDefaultDisplayName(info->displayName);
-    bc->setMesonPath(mInfo->mesonPath);
-
-    ProjectExplorer::BuildStepList *buildSteps = bc->stepList(ProjectExplorer::Constants::BUILDSTEPS_BUILD);
-    ProjectExplorer::BuildStepList *cleanSteps = bc->stepList(ProjectExplorer::Constants::BUILDSTEPS_CLEAN);
-
-    Q_ASSERT(buildSteps);
-    auto makeStep = new NinjaMakeStep(buildSteps);
-    buildSteps->insertStep(0, makeStep);
-    makeStep->setBuildTarget("all", /* on = */ true);
-
-    Q_ASSERT(cleanSteps);
-    auto cleanMakeStep = new NinjaMakeStep(cleanSteps);
-    cleanSteps->insertStep(0, cleanMakeStep);
-    cleanMakeStep->setBuildTarget("clean", /* on = */ true);
-
-    return bc;
-}
-
-bool MesonBuildConfigurationFactory::canRestore(const ProjectExplorer::Target *parent, const QVariantMap &map) const
-{
-    return correctProject(parent) && ProjectExplorer::idFromMap(map) == MESON_BC_ID;
-}
-
-ProjectExplorer::BuildConfiguration *MesonBuildConfigurationFactory::restore(ProjectExplorer::Target *parent, const QVariantMap &map)
-{
-    if (!canRestore(parent, map))
-        return nullptr;
-
-    std::unique_ptr<ProjectExplorer::BuildConfiguration> bc;
-    bc = std::make_unique<MesonBuildConfiguration>(parent);
-    if (!bc->fromMap(map))
-        return nullptr;
-    return bc.release();
-}
-
-bool MesonBuildConfigurationFactory::canClone(const ProjectExplorer::Target *parent, ProjectExplorer::BuildConfiguration *product) const
-{
-    qDebug()<<__PRETTY_FUNCTION__<<" TODO";
-    return false;
-}
-
-ProjectExplorer::BuildConfiguration *MesonBuildConfigurationFactory::clone(ProjectExplorer::Target *parent, ProjectExplorer::BuildConfiguration *product)
-{
-    qDebug()<<__PRETTY_FUNCTION__<<" TODO";
-    return nullptr;
 }
 
 MesonBuildConfigationWidget::MesonBuildConfigationWidget(MesonBuildConfiguration *config, QWidget *parent): ProjectExplorer::NamedWidget(parent), config(config)

@@ -57,7 +57,6 @@ MesonProject::MesonProject(const Utils::FileName &filename):
     Project(PROJECT_MIMETYPE, filename), filename(filename), cppCodeModelUpdater(new CppTools::CppProjectUpdater(this))
 {
     setId(MESONPROJECT_ID);
-    setProjectContext(Core::Context(MESONPROJECT_ID));
     setProjectLanguages(Core::Context(ProjectExplorer::Constants::CXX_LANGUAGE_ID));
     setDisplayName(this->filename.fileName(1).section("/", 0, 0));
 
@@ -351,12 +350,12 @@ const QHash<CompileCommandInfo, QStringList> MesonProject::parseCompileCommands(
     return fileCodeCompletionHints;
 }
 
-bool MesonProject::supportsKit(ProjectExplorer::Kit *k, QString *errorMessage) const
+/*bool MesonProject::supportsKit(ProjectExplorer::Kit *k, QString *errorMessage) const
 {
     Q_UNUSED(k)
     Q_UNUSED(errorMessage)
     return true;
-}
+}*/
 
 bool MesonProject::setupTarget(ProjectExplorer::Target *t)
 {

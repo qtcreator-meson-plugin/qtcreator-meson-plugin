@@ -12,7 +12,8 @@ class NinjaMakeStep : public ProjectExplorer::AbstractProcessStep
     friend class NinjaMakeStepFactory;
 
 public:
-    explicit NinjaMakeStep(ProjectExplorer::BuildStepList *parent);
+    //explicit NinjaMakeStep(ProjectExplorer::BuildStepList *parent);
+    NinjaMakeStep(ProjectExplorer::BuildStepList *bsl, const QString target);
 
     bool init(QList<const BuildStep *> &earlierSteps) override;
     void run(QFutureInterface<bool> &fi) override;
@@ -32,14 +33,11 @@ public:
     QString getSummary();
 
 protected:
-    NinjaMakeStep(ProjectExplorer::BuildStepList *parent, NinjaMakeStep *bs);
-    NinjaMakeStep(ProjectExplorer::BuildStepList *parent, Core::Id id);
     bool fromMap(const QVariantMap &map) override;
 
     void stdOutput(const QString &line);
 
 private:
-    void ctor(ProjectExplorer::BuildStepList *bsl);
     bool setupPP(ProjectExplorer::ProcessParameters &pp);
 
     QStringList m_buildTargets;
@@ -47,21 +45,22 @@ private:
     QString m_ninjaCommand;
 
     QRegExp m_ninjaProgress;
+
+    friend class MesonBuildConfiguration;
 };
 
-class NinjaMakeStepFactory : public ProjectExplorer::IBuildStepFactory
+class NinjaMakeAllStepFactory : public ProjectExplorer::BuildStepFactory
 {
     Q_OBJECT
-
 public:
-    explicit NinjaMakeStepFactory(QObject *parent = nullptr);
+    NinjaMakeAllStepFactory();
+};
 
-    QList<ProjectExplorer::BuildStepInfo>
-        availableSteps(ProjectExplorer::BuildStepList *parent) const override;
-
-    ProjectExplorer::BuildStep *create(ProjectExplorer::BuildStepList *parent, Core::Id id) override;
-    ProjectExplorer::BuildStep *clone(ProjectExplorer::BuildStepList *parent,
-                                      ProjectExplorer::BuildStep *source) override;
+class NinjaMakeCleanStepFactory: public ProjectExplorer::BuildStepFactory
+{
+    Q_OBJECT
+public:
+    NinjaMakeCleanStepFactory();
 };
 
 

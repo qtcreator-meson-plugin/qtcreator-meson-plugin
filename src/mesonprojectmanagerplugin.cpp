@@ -27,7 +27,8 @@ bool MesonProjectManagerPlugin::initialize(const QStringList &arguments, QString
     });
 
     addAutoReleasedObject(new MesonBuildConfigurationFactory());
-    addAutoReleasedObject(new NinjaMakeStepFactory());
+    addAutoReleasedObject(new NinjaMakeAllStepFactory());
+    addAutoReleasedObject(new NinjaMakeCleanStepFactory());
 
     return true;
 }

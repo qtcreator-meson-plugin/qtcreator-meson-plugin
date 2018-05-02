@@ -44,12 +44,12 @@ HEADERS += \
 ## Either set the IDE_SOURCE_TREE when running qmake,
 ## or set the QTC_SOURCE environment variable, to override the default setting
 isEmpty(IDE_SOURCE_TREE): IDE_SOURCE_TREE = $$(QTC_SOURCE)
-isEmpty(IDE_SOURCE_TREE): IDE_SOURCE_TREE = "/home/trilader/code/qt-creator-opensource-src-4.5.1"
+isEmpty(IDE_SOURCE_TREE): error("Please specify either IDE_SOURCE_TREE when running qmake or specify QTC_SOURCE in your environment")
 
 ## Either set the IDE_BUILD_TREE when running qmake,
 ## or set the QTC_BUILD environment variable, to override the default setting
 isEmpty(IDE_BUILD_TREE): IDE_BUILD_TREE = $$(QTC_BUILD)
-isEmpty(IDE_BUILD_TREE): IDE_BUILD_TREE = "/home/trilader/code/build-qtcreator-Desktop-Debug"
+isEmpty(IDE_BUILD_TREE): error("Please specify either IDE_BUILD_TREE when running qmake or specify QTC_BUILD in your environment")
 
 ## uncomment to build plugin into user config directory
 ## <localappdata>/plugins/<ideversion>
