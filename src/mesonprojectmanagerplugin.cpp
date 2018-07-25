@@ -1,8 +1,6 @@
 #include "mesonprojectmanagerplugin.h"
 
 #include "constants.h"
-#include "ninjamakestep.h"
-#include "mesonbuildconfiguration.h"
 #include "mesonproject.h"
 #include "mesonprojectwizard.h"
 
@@ -25,10 +23,6 @@ bool MesonProjectManagerPlugin::initialize(const QStringList &arguments, QString
     Core::IWizardFactory::registerFactoryCreator([] {
         return QList<Core::IWizardFactory *> { new MesonProjectWizard };
     });
-
-    addAutoReleasedObject(new MesonBuildConfigurationFactory());
-    addAutoReleasedObject(new NinjaMakeAllStepFactory());
-    addAutoReleasedObject(new NinjaMakeCleanStepFactory());
 
     return true;
 }

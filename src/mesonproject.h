@@ -41,7 +41,7 @@ public:
     QStringList filesGeneratedFrom(const QString &sourceFile) const override;
     bool needsConfiguration() const override;
     void configureAsExampleProject(const QSet<Core::Id> &platforms) override;
-    bool requiresTargetPanel() const override;
+    //bool requiresTargetPanel() const override;
     ProjectExplorer::ProjectImporter *projectImporter() const override;
 
     void mesonIntrospectBuildsytemFiles(const MesonBuildConfiguration &cfg, MesonProjectNode *root);

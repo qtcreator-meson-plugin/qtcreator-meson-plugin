@@ -2,6 +2,9 @@
 
 #include <extensionsystem/iplugin.h>
 
+#include "mesonbuildconfiguration.h"
+#include "ninjamakestep.h"
+
 namespace MesonProjectManager {
 
 class MesonProjectManagerPlugin : public ExtensionSystem::IPlugin
@@ -13,6 +16,9 @@ public:
     bool initialize(const QStringList &arguments, QString *errorString) override;
     void extensionsInitialized() override;
     ShutdownFlag aboutToShutdown() override;
+    MesonBuildConfigurationFactory mesonBuildConfigurationFactory;
+    NinjaMakeAllStepFactory ninjaMakeAllStepFactory;
+    NinjaMakeCleanStepFactory ninaMakeCleanStepFactory;
 };
 
 }

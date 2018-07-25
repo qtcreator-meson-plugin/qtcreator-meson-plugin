@@ -96,11 +96,11 @@ void MesonProject::refresh()
     MesonBuildConfiguration *cfg = activeBuildConfiguration();
 
     // Stuff stolen from genericproject::refresh
-    auto root = new MesonProjectNode(this, filename);
+    auto root = std::make_unique<MesonProjectNode>(this, filename);
 
     if (cfg) {
         // TODO: fall back to just scan sub directories for meson files if !cfg?
-        mesonIntrospectBuildsytemFiles(*cfg, root);
+        mesonIntrospectBuildsytemFiles(*cfg, root.get());
     }
 
     QHash<CompileCommandInfo, QStringList> codeModelInfo;
@@ -117,33 +117,33 @@ void MesonProject::refresh()
         const Utils::FileName projectBase = filename.parentDir();
         QString buildDirectory = cfg->buildDirectory().toString();
         if (!buildDirectory.endsWith('/')) buildDirectory += "/";
-        auto extraFileNode = new ProjectExplorer::VirtualFolderNode(projectBase, 0);
+        auto extraFileNode = std::make_unique<ProjectExplorer::VirtualFolderNode>(projectBase, 0);
         extraFileNode->setDisplayName("Extra Files");
-        auto generatedFileNode = new ProjectExplorer::VirtualFolderNode(cfg->buildDirectory(), 0);
+        auto generatedFileNode = std::make_unique<ProjectExplorer::VirtualFolderNode>(cfg->buildDirectory(), 0);
         generatedFileNode->setDisplayName("Generated Files");
         for(const auto &fname: extraFiles) {
             if (fname.isEmpty())
                 continue;
 
-            ProjectExplorer::VirtualFolderNode *node = extraFileNode;
+            ProjectExplorer::VirtualFolderNode *node = extraFileNode.get();
             bool generated = false;
             if (fname.startsWith(buildDirectory)) {
-                node = generatedFileNode;
+                node = generatedFileNode.get();
                 generated = true;
             }
 
-            node->addNestedNode(new ProjectExplorer::FileNode(Utils::FileName::fromString(fname),
-                                                                       ProjectExplorer::FileType::Source, generated));
+            node->addNestedNode(std::make_unique<ProjectExplorer::FileNode>(Utils::FileName::fromString(fname),
+                                                                            ProjectExplorer::FileType::Source, generated));
             const QStringList headers = getAllHeadersFor(fname);
             for (const QString &header: headers) {
-                node->addNestedNode(new ProjectExplorer::FileNode(Utils::FileName::fromString(header),
-                                                                           ProjectExplorer::FileType::Header, generated));
+                node->addNestedNode(std::make_unique<ProjectExplorer::FileNode>(Utils::FileName::fromString(header),
+                                                                                ProjectExplorer::FileType::Header, generated));
             }
         }
-        root->addNode(extraFileNode);
-        root->addNode(generatedFileNode);
+        root->addNode(move(extraFileNode));
+        root->addNode(move(generatedFileNode));
     }
-    setRootProjectNode(root);
+    setRootProjectNode(move(root));
 
     refreshCppCodeModel(codeModelInfo);
 
@@ -206,7 +206,7 @@ void MesonProject::mesonIntrospectBuildsytemFiles(const MesonBuildConfiguration 
                 Utils::FileName fnSubprojects = Utils::FileName::fromString(filename.parentDir().appendPath("subprojects").toString());
                 subprojects = new SubProjectsNode(fnSubprojects, ProjectExplorer::NodeType::Folder, "subprojects");
                 subprojects->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_qt.png"));
-                root->addNode(subprojects);
+                root->addNode(std::unique_ptr<ProjectExplorer::FolderNode>(subprojects));
             }
             if (baseNode == root) {
                 baseNode = subprojects;
@@ -216,14 +216,14 @@ void MesonProject::mesonIntrospectBuildsytemFiles(const MesonBuildConfiguration 
 
         if (file.endsWith("/meson.build")) {
             dn = dn.mid(0, dn.size() - 12);
-            auto mfn = new MesonFileNode(this, fn);
+            auto mfn = std::make_unique<MesonFileNode>(this, fn);
             mfn->setDisplayName(dn);
-            baseNode->addNode(mfn);
-            subdirectories[file.mid(0, file.size() - 11)] = mfn;
+            subdirectories[file.mid(0, file.size() - 11)] = mfn.get();
+            baseNode->addNode(move(mfn));
         } else {
-            baseNode->addNestedNode(new ProjectExplorer::FileNode(fn, ProjectExplorer::FileType::Project, false),
+            baseNode->addNestedNode(std::make_unique<ProjectExplorer::FileNode>(fn, ProjectExplorer::FileType::Project, false),
             {}, [](const Utils::FileName &fn) {
-                ProjectExplorer::FolderNode *node = new ProjectExplorer::FolderNode(fn);
+                auto node = std::make_unique<ProjectExplorer::FolderNode>(fn);
                 //node->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_ui.png"));
                 return node;
             });
@@ -377,10 +377,10 @@ void MesonProject::configureAsExampleProject(const QSet<Core::Id> &platforms)
 
 }
 
-bool MesonProject::requiresTargetPanel() const
+/*bool MesonProject::requiresTargetPanel() const
 {
     return false;
-}
+}*/
 
 void MesonProject::refreshCppCodeModel(const QHash<CompileCommandInfo, QStringList> &fileCodeCompletionHints)
 {

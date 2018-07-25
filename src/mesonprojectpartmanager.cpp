@@ -18,20 +18,20 @@ MesonProjectPartManager::MesonProjectPartManager(ProjectExplorer::FolderNode *no
         project->refresh();
     });
 
-    node->addNode(new ProjectExplorer::FileNode(Utils::FileName::fromString(filename.toString()), ProjectExplorer::FileType::Project, false));
+    node->addNode(std::make_unique<ProjectExplorer::FileNode>(Utils::FileName::fromString(filename.toString()), ProjectExplorer::FileType::Project, false));
 
     parser.reset(new MesonBuildFileParser(filename.toString()));
     parser->parse();
 
     for(const auto &listName: parser->fileListNames())
     {
-        auto listNode = new FileListNode(this, &parser->fileList(listName), Utils::FileName::fromString(parser->getProject_base()),1);
+        auto listNode = std::make_unique<FileListNode>(this, &parser->fileList(listName), Utils::FileName::fromString(parser->getProject_base()),1);
         listNode->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_ui.png"));
         listNode->setDisplayName(listName);
         for(const auto &fname: parser->fileListAbsolute(listName)) {
-            listNode->addNestedNode(new ProjectExplorer::FileNode(Utils::FileName::fromString(fname), ProjectExplorer::FileType::Source, false),
+            listNode->addNestedNode(std::make_unique<ProjectExplorer::FileNode>(Utils::FileName::fromString(fname), ProjectExplorer::FileType::Source, false),
             {}, [](const Utils::FileName &fn) {
-                ProjectExplorer::FolderNode *node = new MesonFileSubFolderNode(fn);
+                auto node = std::make_unique<MesonFileSubFolderNode>(fn);
                 node->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_ui.png"));
                 return node;
             });
@@ -39,15 +39,15 @@ MesonProjectPartManager::MesonProjectPartManager(ProjectExplorer::FolderNode *no
 
             const QStringList headers = getAllHeadersFor(fname);
             for(const QString &header: headers) {
-                listNode->addNestedNode(new ProjectExplorer::FileNode(Utils::FileName::fromString(header), ProjectExplorer::FileType::Header, false),
+                listNode->addNestedNode(std::make_unique<ProjectExplorer::FileNode>(Utils::FileName::fromString(header), ProjectExplorer::FileType::Header, false),
                 {}, [](const Utils::FileName &fn) {
-                    ProjectExplorer::FolderNode *node = new MesonFileSubFolderNode(fn);
+                    auto node = std::make_unique<MesonFileSubFolderNode>(fn);
                     node->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_ui.png"));
                     return node;
                 });
             }
         }
-        node->addNode(listNode);
+        node->addNode(move(listNode));
     }
 }
 
