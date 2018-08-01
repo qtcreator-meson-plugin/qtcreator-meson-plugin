@@ -10,7 +10,7 @@ class MesonBuildConfiguration : public ProjectExplorer::BuildConfiguration
     Q_OBJECT
 
 public:
-    explicit MesonBuildConfiguration(ProjectExplorer::Target *parent);
+    explicit MesonBuildConfiguration(ProjectExplorer::Target *parent, const Core::Id &id);
 
 public:
     void initialize(const ProjectExplorer::BuildInfo *info) override;

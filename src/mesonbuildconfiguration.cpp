@@ -23,8 +23,8 @@
 
 namespace MesonProjectManager {
 
-MesonBuildConfiguration::MesonBuildConfiguration(ProjectExplorer::Target *parent) :
-    BuildConfiguration(parent, Core::Id(MESON_BC_ID))
+MesonBuildConfiguration::MesonBuildConfiguration(ProjectExplorer::Target *parent, const Core::Id &id) :
+    BuildConfiguration(parent, id)
 {
 }
 
