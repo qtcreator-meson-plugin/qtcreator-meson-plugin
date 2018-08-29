@@ -38,6 +38,9 @@ void MesonBuildConfiguration::initialize(const ProjectExplorer::BuildInfo *info)
     ProjectExplorer::BuildStepList *cleanSteps = stepList(ProjectExplorer::Constants::BUILDSTEPS_CLEAN);
     cleanSteps->appendStep(new NinjaMakeStep(cleanSteps, "clean"));
 
+    const MesonBuildInfo *mInfo = static_cast<const MesonBuildInfo *>(info);
+    setMesonPath(mInfo->mesonPath);
+
     updateCacheAndEmitEnvironmentChanged();
 }
 
