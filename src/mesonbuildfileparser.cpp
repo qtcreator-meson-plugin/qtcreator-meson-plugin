@@ -3,6 +3,7 @@
 #include <QFile>
 #include <QByteArray>
 #include <QFileInfo>
+#include <QRegularExpression>
 
 namespace MesonProjectManager {
 
@@ -25,16 +26,20 @@ void MesonBuildFileParser::parse()
         trimmed_line=line.trimmed();
     };
 
+    const QRegularExpression interpreted_line(R"(^\s*'([^']+)',?\s*$)");
+
     while (!file.atEnd()) {
         read_line();
         if (trimmed_line.startsWith("#ide:editable-filelist")) {
-            chunks.append({ChunkType::other, line, "", {}});
+            chunks.append({ChunkType::other, line, "", {}, {}});
             if (file.atEnd())
                 break;
             read_line();
 
             QStringList files;
             QString section_name = trimmed_line.section('=', 0, 0).simplified();
+            QString uninterpreted;
+            QMap<QString, QString> uninterpreted_lines;
 
             while (true) {
                 read_line();
@@ -43,12 +48,26 @@ void MesonBuildFileParser::parse()
                 if (trimmed_line.startsWith("]"))
                     break;
 
-                files.append(trimmed_line.section("'", 1, 1));
+                const auto match = interpreted_line.match(trimmed_line);
+                if (match.hasMatch()) {
+                    const QString fn = match.captured(1);
+                    files.append(fn);
+                    if (!uninterpreted.isEmpty()) {
+                        uninterpreted_lines.insert(fn, uninterpreted);
+                        uninterpreted.clear();
+                    }
+                }
+                else
+                {
+                    uninterpreted.append(line);
+                }
             }
 
-            chunks.append({ChunkType::file_list, "", section_name, files});
+            if (!uninterpreted.isEmpty())
+                uninterpreted_lines.insert("", uninterpreted);
+            chunks.append({ChunkType::file_list, "", section_name, files, uninterpreted_lines});
         } else {
-            chunks.append({ChunkType::other, line, "", {}});
+            chunks.append({ChunkType::other, line, "", {}, {}});
         }
     }
 
@@ -69,8 +88,21 @@ QByteArray MesonBuildFileParser::regenerate()
         } else if (chunk.type==ChunkType::file_list) {
             output.append(QString(chunk.file_list_name+" = [\n").toUtf8());
             chunk.file_list.sort();
-            for (const auto& file: chunk.file_list)
+            auto uninterpreted_it = chunk.uninterpreted_lines.cbegin();
+            const auto uninterpreted_it_end = chunk.uninterpreted_lines.cend();
+            QString trailing_uninterpreted;
+            if (uninterpreted_it!=uninterpreted_it_end && uninterpreted_it.key()=="") {
+                trailing_uninterpreted = uninterpreted_it.value();
+                uninterpreted_it++;
+            }
+            for (const auto& file: chunk.file_list) {
+                if (uninterpreted_it!=uninterpreted_it_end && uninterpreted_it.key()>=file) {
+                    output.append(uninterpreted_it.value().toUtf8());
+                    uninterpreted_it++;
+                }
                 output.append(QString("  '"+file+"',\n").toUtf8());
+            }
+            output.append(trailing_uninterpreted.toUtf8());
             output.append("]\n");
         }
     }

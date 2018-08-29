@@ -23,6 +23,7 @@ public:
         QString line;
         QString file_list_name;
         QStringList file_list;
+        QMap<QString, QString> uninterpreted_lines;
     };
 
     const QString filename;
