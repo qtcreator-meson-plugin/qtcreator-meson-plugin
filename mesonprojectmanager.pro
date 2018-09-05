@@ -82,4 +82,5 @@ RESOURCES += \
 
 DISTFILES += \
     LICENSE.txt \
-    README.md
+    README.md \
+    testplan.md
