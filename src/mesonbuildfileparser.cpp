@@ -96,11 +96,15 @@ QByteArray MesonBuildFileParser::regenerate()
                 uninterpreted_it++;
             }
             for (const auto& file: chunk.file_list) {
-                if (uninterpreted_it!=uninterpreted_it_end && uninterpreted_it.key()>=file) {
+                while (uninterpreted_it!=uninterpreted_it_end && uninterpreted_it.key()<=file) {
                     output.append(uninterpreted_it.value().toUtf8());
                     uninterpreted_it++;
                 }
                 output.append(QString("  '"+file+"',\n").toUtf8());
+            }
+            while (uninterpreted_it!=uninterpreted_it_end) {
+                output.append(uninterpreted_it.value().toUtf8());
+                uninterpreted_it++;
             }
             output.append(trailing_uninterpreted.toUtf8());
             output.append("]\n");
