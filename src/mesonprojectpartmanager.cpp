@@ -28,7 +28,8 @@ MesonProjectPartManager::MesonProjectPartManager(ProjectExplorer::FolderNode *no
         auto listNode = std::make_unique<FileListNode>(this, &parser->fileList(listName), Utils::FileName::fromString(parser->getProject_base()),1);
         listNode->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_ui.png"));
         listNode->setDisplayName(listName);
-        for(const auto &fname: parser->fileListAbsolute(listName)) {
+        const QStringList abs_file_paths = parser->fileListAbsolute(listName);
+        for(const auto &fname: abs_file_paths) {
             listNode->addNestedNode(std::make_unique<ProjectExplorer::FileNode>(Utils::FileName::fromString(fname), ProjectExplorer::FileType::Source, false),
             {}, [](const Utils::FileName &fn) {
                 auto node = std::make_unique<MesonFileSubFolderNode>(fn);
@@ -39,6 +40,8 @@ MesonProjectPartManager::MesonProjectPartManager(ProjectExplorer::FolderNode *no
 
             const QStringList headers = getAllHeadersFor(fname);
             for(const QString &header: headers) {
+                if(abs_file_paths.contains(header))
+                    continue;
                 listNode->addNestedNode(std::make_unique<ProjectExplorer::FileNode>(Utils::FileName::fromString(header), ProjectExplorer::FileType::Header, false),
                 {}, [](const Utils::FileName &fn) {
                     auto node = std::make_unique<MesonFileSubFolderNode>(fn);
