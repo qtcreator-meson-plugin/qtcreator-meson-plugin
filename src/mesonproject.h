@@ -39,7 +39,7 @@ public:
     explicit MesonProject(const Utils::FileName &proFile);
     virtual ~MesonProject();
 
-    bool setupTarget(ProjectExplorer::Target *t);
+    bool setupTarget(ProjectExplorer::Target *t) override;
     QStringList filesGeneratedFrom(const QString &sourceFile) const override;
     bool needsConfiguration() const override;
     void configureAsExampleProject(const QSet<Core::Id> &platforms) override;
