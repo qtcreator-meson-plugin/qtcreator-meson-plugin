@@ -16,4 +16,9 @@ bool MesonProjectNode::supportsAction(ProjectExplorer::ProjectAction action, con
     return false;
 }
 
+PathResolver::DirectoryInfo MesonProjectNode::getBaseDirectoryInfo() const
+{
+    return partMgr.projectBaseDirectoryInfo;
+}
+
 } // namespace MesonProjectManager

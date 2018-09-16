@@ -3,6 +3,7 @@
 #include "mesonbuildfileparser.h"
 #include "mesonprojectnode.h"
 #include "mesonbuildconfiguration.h"
+#include "pathresolver.h"
 
 #include <cpptools/cppprojectupdater.h>
 
@@ -15,6 +16,7 @@
 #include <QFuture>
 
 #include <memory>
+
 
 namespace MesonProjectManager {
 
@@ -47,10 +49,12 @@ public:
     void mesonIntrospectBuildsytemFiles(const MesonBuildConfiguration &cfg, MesonProjectNode *root);
     void mesonIntrospectProjectInfo(const MesonBuildConfiguration &cfg);
     const QHash<CompileCommandInfo, QStringList> parseCompileCommands(const MesonBuildConfiguration &cfg) const;
+    QHash<CompileCommandInfo, QStringList> rewritePaths(const PathResolver::DirectoryInfo &base, const QHash<CompileCommandInfo, QStringList> &input) const;
 
     void refreshCppCodeModel(const QHash<CompileCommandInfo, QStringList> &);
 
     QSet<QString> filesInEditableGroups;
+    PathResolver pathResolver;
 
 private:
     MesonBuildConfiguration *activeBuildConfiguration();

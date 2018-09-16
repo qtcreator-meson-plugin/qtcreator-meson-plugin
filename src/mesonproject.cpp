@@ -107,6 +107,7 @@ void MesonProject::refresh()
     if (cfg) {
         mesonIntrospectProjectInfo(*cfg);
         codeModelInfo = parseCompileCommands(*cfg);
+        codeModelInfo = rewritePaths(root->getBaseDirectoryInfo(), codeModelInfo);
 
         QSet<QString> allFiles;
         for (const QStringList &list: codeModelInfo.values()) {
@@ -348,6 +349,30 @@ const QHash<CompileCommandInfo, QStringList> MesonProject::parseCompileCommands(
     }
 
     return fileCodeCompletionHints;
+}
+
+QHash<CompileCommandInfo, QStringList> MesonProject::rewritePaths(const PathResolver::DirectoryInfo &base, const QHash<CompileCommandInfo, QStringList> &input) const
+{
+    QHash<CompileCommandInfo, QStringList> out;
+
+    auto processStringList = [this,base](const QStringList &list)
+    {
+        QStringList out;
+
+        for(const QString &str: list) {
+            out.append(pathResolver.getIntendedFileName(base, str));
+        }
+
+        return out;
+    };
+
+    for(auto it=input.cbegin(); it!=input.cend(); it++) {
+        CompileCommandInfo cci = it.key();
+        cci.includes = processStringList(cci.includes);
+        out.insert(cci, processStringList(it.value()));
+    }
+
+    return out;
 }
 
 /*bool MesonProject::supportsKit(ProjectExplorer::Kit *k, QString *errorMessage) const

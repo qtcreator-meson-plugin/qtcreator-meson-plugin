@@ -9,11 +9,14 @@
 #include <coreplugin/fileiconprovider.h>
 #include <coreplugin/icore.h>
 
+#include <QFileInfo>
+
 namespace MesonProjectManager {
 
 MesonProjectPartManager::MesonProjectPartManager(ProjectExplorer::FolderNode *node, MesonProject *project, const Utils::FileName &filename)
     : project(project)
 {
+    projectBaseDirectoryInfo = project->pathResolver.getForPath(QFileInfo(filename.toString()).absolutePath());
     meson_build = std::make_unique<ProjectExplorer::ProjectDocument>(MesonProjectManager::PROJECT_MIMETYPE, filename, [project] {
         project->refresh();
     });
