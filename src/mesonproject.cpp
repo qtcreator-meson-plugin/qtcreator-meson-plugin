@@ -98,14 +98,16 @@ void MesonProject::refresh()
     // Stuff stolen from genericproject::refresh
     auto root = std::make_unique<MesonProjectNode>(this, filename);
 
-    if (cfg) {
-        // TODO: fall back to just scan sub directories for meson files if !cfg?
-        mesonIntrospectBuildsytemFiles(*cfg, root.get());
+    if(!mesonIntrospectProjectInfoFromSource(cfg, root.get())) {
+        // Fallback for meson without introspection without build directory
+        if (cfg) {
+            mesonIntrospectBuildsytemFiles(*cfg, root.get());
+            mesonIntrospectProjectInfo(*cfg);
+        }
     }
 
     QHash<CompileCommandInfo, QStringList> codeModelInfo;
     if (cfg) {
-        mesonIntrospectProjectInfo(*cfg);
         codeModelInfo = parseCompileCommands(*cfg);
         codeModelInfo = rewritePaths(root->getBaseDirectoryInfo(), codeModelInfo);
 
@@ -270,6 +272,84 @@ void MesonProject::mesonIntrospectProjectInfo(const MesonBuildConfiguration &cfg
     if (json.contains("name")) {
         setDisplayName(json.value("name").toString());
     }
+}
+
+void MesonProject::addNestedNodes(ProjectExplorer::FolderNode *root, const QJsonObject &json, int displayNameSkip)
+{
+    QStringList buildsystemFiles;
+    const QJsonArray buildsystemFilesArray = json.value("buildsystem_files").toArray();
+    for(const QJsonValue &value: buildsystemFilesArray) {
+        buildsystemFiles.append(value.toString());
+    }
+    std::sort(buildsystemFiles.begin(), buildsystemFiles.end(), [](const QString &a, const QString &b) {
+        return a.size()<b.size();
+    });
+
+    QMap<QString, ProjectExplorer::FolderNode*> createdNodes;
+    for(const QString &relativeFilename: buildsystemFiles) {
+        // top level meson build is handled seperatly.
+        if (relativeFilename == "meson.build") continue;
+        const Utils::FileName absoluteFilename = filename.parentDir().appendPath(relativeFilename);
+        ProjectExplorer::FolderNode *parentNode = root;
+        QString parentRelativeFilename = relativeFilename.mid(displayNameSkip);
+
+        QString probePath = relativeFilename.section("/", 0, -2);
+        while(probePath.length()) {
+            if(createdNodes.contains(probePath)) {
+                parentRelativeFilename = relativeFilename.mid(probePath.length()+1);
+                parentNode = createdNodes.value(probePath);
+            }
+            probePath = probePath.section("/", 0, -2);
+        }
+        if (relativeFilename.endsWith("/meson.build")) {
+            MesonFileNode *mfn = createMesonFileNode(parentNode, parentRelativeFilename, absoluteFilename);
+            createdNodes[relativeFilename.mid(0, relativeFilename.size() - 12)] = mfn; // Remove meson.build suffix
+        } else {
+            createOtherBuildsystemFileNode(parentNode, absoluteFilename);
+        }
+    }
+}
+
+bool MesonProject::mesonIntrospectProjectInfoFromSource(const MesonBuildConfiguration *cfg, MesonProjectNode *root)
+{
+    QString mesonPath;
+    if(cfg)
+        mesonPath = cfg->mesonPath();
+    else
+        mesonPath = findDefaultMesonExecutable().toString();
+
+    Utils::SynchronousProcess proc;
+    proc.setTimeoutS(100);
+    auto response = proc.run(mesonPath, {"introspect", filename.toString(), "--projectinfo"});
+    if (response.exitCode!=0) {
+        ProjectExplorer::TaskHub::addTask(ProjectExplorer::Task::Error,
+                                          QStringLiteral("Can't introspect projectinfo. %1")
+                                          .arg(response.exitMessage(mesonPath, proc.timeoutS())),
+                                          ProjectExplorer::Constants::TASK_CATEGORY_BUILDSYSTEM,
+                                          filename);
+
+        Core::MessageManager::write(response.allOutput());
+        return false;
+    }
+    QJsonObject json = QJsonDocument::fromJson(response.allRawOutput()).object();
+
+    const QString projectName = json.value("descriptive_name").toString();
+    if(projectName.length()) {
+        setDisplayName(projectName);
+    }
+
+    addNestedNodes(root, json, 0);
+
+    const QJsonArray subprojectsArray = json.value("subprojects").toArray();
+    if(subprojectsArray.count()) {
+        ProjectExplorer::FolderNode *subprojectsNode = createSubProjectsNode(root);
+        for(const QJsonValue &value: subprojectsArray) {
+            const QJsonObject subproject = value.toObject();
+            addNestedNodes(subprojectsNode, subproject, 12);
+        }
+    }
+
+    return true;
 }
 
 Utils::FileName MesonProject::findDefaultMesonExecutable()

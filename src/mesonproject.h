@@ -50,6 +50,7 @@ public:
 
     void mesonIntrospectBuildsytemFiles(const MesonBuildConfiguration &cfg, MesonProjectNode *root);
     void mesonIntrospectProjectInfo(const MesonBuildConfiguration &cfg);
+    bool mesonIntrospectProjectInfoFromSource(const MesonBuildConfiguration *cfg, MesonProjectNode *root);
     const QHash<CompileCommandInfo, QStringList> parseCompileCommands(const MesonBuildConfiguration &cfg) const;
     QHash<CompileCommandInfo, QStringList> rewritePaths(const PathResolver::DirectoryInfo &base, const QHash<CompileCommandInfo, QStringList> &input) const;
 
@@ -61,6 +62,8 @@ public:
     MesonProjectManager::MesonFileNode* createMesonFileNode(ProjectExplorer::FolderNode *parentNode, QString parentRelativeName, Utils::FileName absoluteFileName);
     void createOtherBuildsystemFileNode(ProjectExplorer::FolderNode *parentNode, Utils::FileName absoluteFilename);
     ProjectExplorer::FolderNode *createSubProjectsNode(ProjectExplorer::FolderNode *parentNode);
+    void addNestedNodes(ProjectExplorer::FolderNode *root, const QJsonObject &json, int displayNameSkip);
+
     static Utils::FileName findDefaultMesonExecutable();
 
 private:
