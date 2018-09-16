@@ -162,6 +162,35 @@ public:
     }
 };
 
+MesonFileNode* MesonProject::createMesonFileNode(ProjectExplorer::FolderNode *parentNode, QString parentRelativeName, Utils::FileName absoluteFileName)
+{
+    const QString displayName = parentRelativeName.mid(0, parentRelativeName.size() - 12); // Remove /meson.build suffix
+    auto mfn = std::make_unique<MesonFileNode>(this, absoluteFileName);
+    mfn->setDisplayName(displayName);
+    MesonFileNode *out = mfn.get();
+    parentNode->addNode(move(mfn));
+    return out;
+}
+
+void MesonProject::createOtherBuildsystemFileNode(ProjectExplorer::FolderNode *parentNode, Utils::FileName absoluteFilename)
+{
+    parentNode->addNestedNode(std::make_unique<ProjectExplorer::FileNode>(absoluteFilename, ProjectExplorer::FileType::Project, false),
+    {}, [](const Utils::FileName &fn) {
+        auto node = std::make_unique<ProjectExplorer::FolderNode>(fn);
+        //node->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_ui.png"));
+        return node;
+    });
+}
+
+ProjectExplorer::FolderNode* MesonProject::createSubProjectsNode(ProjectExplorer::FolderNode *parentNode)
+{
+    Utils::FileName fnSubprojects = Utils::FileName::fromString(filename.parentDir().appendPath("subprojects").toString());
+    ProjectExplorer::FolderNode *subprojects = new SubProjectsNode(fnSubprojects, ProjectExplorer::NodeType::Folder, "subprojects");
+    subprojects->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_qt.png"));
+    parentNode->addNode(std::unique_ptr<ProjectExplorer::FolderNode>(subprojects));
+    return subprojects;
+}
+
 void MesonProject::mesonIntrospectBuildsytemFiles(const MesonBuildConfiguration &cfg, MesonProjectNode *root)
 {
     Utils::SynchronousProcess proc;
@@ -188,8 +217,8 @@ void MesonProject::mesonIntrospectBuildsytemFiles(const MesonBuildConfiguration 
         if (file == "meson.build") continue;
 
         ProjectExplorer::FolderNode *baseNode = root;
-        Utils::FileName fn = Utils::FileName::fromString(filename.parentDir().appendPath(file).toString());
-        QString dn = file;
+        Utils::FileName absoluteFilename = Utils::FileName::fromString(filename.parentDir().appendPath(file).toString());
+        QString parentRelativeName = file;
 
         int longestMatch = 0;
         for (QString subdir : subdirectories.keys()) {
@@ -199,35 +228,24 @@ void MesonProject::mesonIntrospectBuildsytemFiles(const MesonBuildConfiguration 
             }
         }
         if (longestMatch) {
-            dn = dn.mid(longestMatch);
+            parentRelativeName = parentRelativeName.mid(longestMatch);
         }
 
         if (file.startsWith("subprojects/")) {
             if (!subprojects) {
-                Utils::FileName fnSubprojects = Utils::FileName::fromString(filename.parentDir().appendPath("subprojects").toString());
-                subprojects = new SubProjectsNode(fnSubprojects, ProjectExplorer::NodeType::Folder, "subprojects");
-                subprojects->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_qt.png"));
-                root->addNode(std::unique_ptr<ProjectExplorer::FolderNode>(subprojects));
+                subprojects = createSubProjectsNode(root);
             }
             if (baseNode == root) {
                 baseNode = subprojects;
-                dn = dn.mid(12);
+                parentRelativeName = parentRelativeName.mid(12); // Remove subprojects/ prefix
             }
         }
 
         if (file.endsWith("/meson.build")) {
-            dn = dn.mid(0, dn.size() - 12);
-            auto mfn = std::make_unique<MesonFileNode>(this, fn);
-            mfn->setDisplayName(dn);
-            subdirectories[file.mid(0, file.size() - 11)] = mfn.get();
-            baseNode->addNode(move(mfn));
+            MesonFileNode *mfn = createMesonFileNode(baseNode, parentRelativeName, absoluteFilename);
+            subdirectories[file.mid(0, file.size() - 11)] = mfn; // Remove meson.build suffix
         } else {
-            baseNode->addNestedNode(std::make_unique<ProjectExplorer::FileNode>(fn, ProjectExplorer::FileType::Project, false),
-            {}, [](const Utils::FileName &fn) {
-                auto node = std::make_unique<ProjectExplorer::FolderNode>(fn);
-                //node->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_ui.png"));
-                return node;
-            });
+            createOtherBuildsystemFileNode(baseNode, absoluteFilename);
         }
     }
 }

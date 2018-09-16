@@ -31,6 +31,8 @@ public:
     bool operator==(const CompileCommandInfo &o) const;
 };
 
+class MesonFileNode;
+
 class MesonProject : public ProjectExplorer::Project
 {
     Q_OBJECT
@@ -56,6 +58,9 @@ public:
     QSet<QString> filesInEditableGroups;
     PathResolver pathResolver;
 
+    MesonProjectManager::MesonFileNode* createMesonFileNode(ProjectExplorer::FolderNode *parentNode, QString parentRelativeName, Utils::FileName absoluteFileName);
+    void createOtherBuildsystemFileNode(ProjectExplorer::FolderNode *parentNode, Utils::FileName absoluteFilename);
+    ProjectExplorer::FolderNode *createSubProjectsNode(ProjectExplorer::FolderNode *parentNode);
     static Utils::FileName findDefaultMesonExecutable();
 
 private:
