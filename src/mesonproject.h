@@ -56,6 +56,8 @@ public:
     QSet<QString> filesInEditableGroups;
     PathResolver pathResolver;
 
+    static Utils::FileName findDefaultMesonExecutable();
+
 private:
     MesonBuildConfiguration *activeBuildConfiguration();
     const Utils::FileName filename;

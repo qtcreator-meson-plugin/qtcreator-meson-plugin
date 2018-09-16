@@ -171,16 +171,9 @@ bool MesonProjectWizard::postGenerateFiles(const QWizard *w, const Core::Generat
 {
     Q_UNUSED(w);
 
-    Utils::FileName mesonBin = Utils::Environment::systemEnvironment().searchInPath("meson.py");
-    if (mesonBin.isEmpty()) {
-        mesonBin = Utils::Environment::systemEnvironment().searchInPath("meson");
-        if (mesonBin.isEmpty()) {
-            ProjectExplorer::TaskHub::addTask(ProjectExplorer::Task::Error,
-                                              QStringLiteral("Meson execuatble not found in PATH"),
-                                              ProjectExplorer::Constants::TASK_CATEGORY_BUILDSYSTEM);
-            return false;
-        }
-    }
+    const Utils::FileName mesonBin = MesonProject::findDefaultMesonExecutable();
+    if(mesonBin.isEmpty())
+        return false;
 
     const MesonProjectWizardDialog *wizard = qobject_cast<const MesonProjectWizardDialog *>(w);
     const QString projectPath = wizard->path();

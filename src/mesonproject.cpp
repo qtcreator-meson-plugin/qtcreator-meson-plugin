@@ -254,6 +254,20 @@ void MesonProject::mesonIntrospectProjectInfo(const MesonBuildConfiguration &cfg
     }
 }
 
+Utils::FileName MesonProject::findDefaultMesonExecutable()
+{
+    Utils::FileName mesonBin = Utils::Environment::systemEnvironment().searchInPath("meson.py");
+    if (mesonBin.isEmpty()) {
+        mesonBin = Utils::Environment::systemEnvironment().searchInPath("meson");
+        if (mesonBin.isEmpty()) {
+            ProjectExplorer::TaskHub::addTask(ProjectExplorer::Task::Error,
+                                              QStringLiteral("Meson execuatble not found in PATH"),
+                                              ProjectExplorer::Constants::TASK_CATEGORY_BUILDSYSTEM);
+        }
+    }
+    return mesonBin;
+}
+
 const QHash<CompileCommandInfo, QStringList> MesonProject::parseCompileCommands(const MesonBuildConfiguration &cfg) const
 {
     QHash<CompileCommandInfo, QStringList> fileCodeCompletionHints;
