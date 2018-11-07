@@ -20,7 +20,8 @@ SOURCES += \
     src/mesonproject.cpp \
     src/fixdirectoryparser.cpp \
     src/mesonprojectwizard.cpp \
-    src/pathresolver.cpp
+    src/pathresolver.cpp \
+    src/mesonconfigurationdialog.cpp
 
 HEADERS += \
     src/ninjamakestep.h \
@@ -39,7 +40,8 @@ HEADERS += \
     src/mesonproject.h \
     src/fixdirectoryparser.h \
     src/mesonprojectwizard.h \
-    src/pathresolver.h
+    src/pathresolver.h \
+    src/mesonconfigurationdialog.h
 
 # Qt Creator linking
 

@@ -56,6 +56,8 @@ public:
 
     void refreshCppCodeModel(const QHash<CompileCommandInfo, QStringList> &);
 
+    void editOptions();
+
     QSet<QString> filesInEditableGroups;
     PathResolver pathResolver;
 

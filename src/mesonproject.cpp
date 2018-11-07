@@ -41,6 +41,11 @@
 #include <iostream>
 #include <memory>
 
+#include "mesonconfigurationdialog.h"
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QMessageBox>
+
 namespace MesonProjectManager {
 
 quint64 qHash(const CompileCommandInfo &info)
@@ -559,6 +564,61 @@ void MesonProject::refreshCppCodeModel(const QHash<CompileCommandInfo, QStringLi
 
     const CppTools::ProjectUpdateInfo projectInfoUpdate(this, cToolChain, cxxToolChain, k, parts);
     cppCodeModelUpdater->update(projectInfoUpdate);
+}
+
+void MesonProject::editOptions()
+{
+    Utils::SynchronousProcess proc;
+    proc.setTimeoutS(100);
+    MesonBuildConfiguration &cfg = *activeBuildConfiguration();
+    auto response = proc.run(cfg.mesonPath(), {"introspect", "--buildoptions", cfg.buildDirectory().toString()});
+    if (response.exitCode!=0) {
+        QMessageBox::warning(nullptr, tr("Can't get buildoptions"), response.exitMessage(cfg.mesonPath(), proc.timeoutS())+"\n"+response.stdOut()+"\n\n"+response.stdErr());
+        return;
+    }
+    const QString json = response.stdOut();
+    QJsonDocument doc = QJsonDocument::fromJson(json.toUtf8());
+    MesonConfigurationDialog *dlg = new MesonConfigurationDialog(doc.array());
+    dlg->show();
+
+    connect(dlg, &QDialog::accepted, [this, dlg]{
+        MesonBuildConfiguration &cfg = *activeBuildConfiguration();
+        QStringList args = {"configure", cfg.buildDirectory().toString()};
+
+        for(const QJsonObject &obj: dlg->getChangedValues()) {
+            const QString name = obj.value("name").toString();
+            const QString type = obj.value("type").toString();
+            const QJsonValue value = obj.value("value");
+
+            if (type == "array") {
+                QStringList arrayArgs;
+                for(const QJsonValue val: value.toArray()) {
+                    arrayArgs.append(val.toString().replace("'", "'\\''"));
+                }
+                if(arrayArgs.isEmpty())
+                    args.append(QStringLiteral("-D%1=").arg(name));
+                else
+                    args.append(QStringLiteral("-D%1='%2'").arg(name, arrayArgs.join("' '")));
+            } else if (type == "boolean") {
+                const QString valueStr = value.toBool()?QStringLiteral("true"):QStringLiteral("false");
+                args.append(QStringLiteral("-D%1=%2").arg(name, valueStr));
+            } else if (type == "combo") {
+                args.append(QStringLiteral("-D%1=%2").arg(name, value.toString()));
+            } else if (type == "integer") {
+                args.append(QStringLiteral("-D%1=%2").arg(name, QString::number(value.toInt())));
+            } else if (type == "string") {
+                args.append(QStringLiteral("-D%1=%2").arg(name, value.toString()));
+            }
+        }
+
+        Utils::SynchronousProcess proc;
+        proc.setTimeoutS(100);
+        auto response = proc.run(cfg.mesonPath(), args);
+        if (response.exitCode!=0) {
+            QMessageBox::warning(nullptr, tr("Can't configure meson build"), args.join("<->")+"\n\n"+response.exitMessage(cfg.mesonPath(), proc.timeoutS())+"\n"+response.stdOut()+"\n\n"+response.stdErr());
+            return;
+        }
+    });
 }
 
 ProjectExplorer::ProjectImporter *MesonProject::projectImporter() const
