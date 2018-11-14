@@ -17,8 +17,10 @@
 namespace MesonProjectManager
 {
 
-MesonConfigurationDialog::MesonConfigurationDialog(const QJsonArray &json, QWidget *parent): QDialog (parent)
+MesonConfigurationDialog::MesonConfigurationDialog(const QJsonArray &json, const QString &projectName, QWidget *parent): QDialog (parent)
 {
+    setWindowTitle(tr("Options for %1").arg(projectName));
+
     QVBoxLayout *outer = new QVBoxLayout;
     setLayout(outer);
 

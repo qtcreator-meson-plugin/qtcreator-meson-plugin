@@ -578,7 +578,7 @@ void MesonProject::editOptions()
     }
     const QString json = response.stdOut();
     QJsonDocument doc = QJsonDocument::fromJson(json.toUtf8());
-    MesonConfigurationDialog *dlg = new MesonConfigurationDialog(doc.array());
+    MesonConfigurationDialog *dlg = new MesonConfigurationDialog(doc.array(), cfg.project()->displayName());
     dlg->show();
 
     connect(dlg, &QDialog::accepted, [this, dlg]{

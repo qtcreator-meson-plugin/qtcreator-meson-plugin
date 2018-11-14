@@ -13,7 +13,7 @@ namespace MesonProjectManager
 class MesonConfigurationDialog: public QDialog
 {
 public:
-    MesonConfigurationDialog(const QJsonArray &json, QWidget *parent=nullptr);
+    MesonConfigurationDialog(const QJsonArray &json, const QString &projectName, QWidget *parent=nullptr);
     QMap<QString, QJsonObject> getChangedValues() const;
 
 private:
