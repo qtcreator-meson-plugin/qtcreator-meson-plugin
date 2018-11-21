@@ -56,6 +56,7 @@ public:
 
     void refreshCppCodeModel(const QHash<CompileCommandInfo, QStringList> &);
 
+    bool canConfigure();
     void editOptions();
 
     QSet<QString> filesInEditableGroups;

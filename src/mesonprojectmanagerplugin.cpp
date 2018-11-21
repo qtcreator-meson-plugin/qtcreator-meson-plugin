@@ -52,8 +52,9 @@ bool MesonProjectManagerPlugin::initialize(const QStringList &arguments, QString
         auto projecttree = ProjectExplorer::ProjectTree::instance();
 
         MesonProject *mp = dynamic_cast<MesonProject*>(projecttree->currentProject());
-        configureProjectAction->setVisible(mp!=nullptr);
-        configureProjectAction->setEnabled(mp!=nullptr);
+        const bool canConfigure = mp!=nullptr && mp->canConfigure();
+        configureProjectAction->setVisible(canConfigure);
+        configureProjectAction->setEnabled(canConfigure);
     });
 
     return true;

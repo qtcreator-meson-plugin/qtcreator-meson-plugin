@@ -566,11 +566,20 @@ void MesonProject::refreshCppCodeModel(const QHash<CompileCommandInfo, QStringLi
     cppCodeModelUpdater->update(projectInfoUpdate);
 }
 
+bool MesonProject::canConfigure()
+{
+    return activeBuildConfiguration()!=nullptr;
+}
+
 void MesonProject::editOptions()
 {
     Utils::SynchronousProcess proc;
     proc.setTimeoutS(100);
-    MesonBuildConfiguration &cfg = *activeBuildConfiguration();
+    MesonBuildConfiguration *cfg_ptr = activeBuildConfiguration();
+    if(!cfg_ptr) {
+        return;
+    }
+    MesonBuildConfiguration &cfg = *cfg_ptr;
     auto response = proc.run(cfg.mesonPath(), {"introspect", "--buildoptions", cfg.buildDirectory().toString()});
     if (response.exitCode!=0) {
         QMessageBox::warning(nullptr, tr("Can't get buildoptions"), response.exitMessage(cfg.mesonPath(), proc.timeoutS())+"\n"+response.stdOut()+"\n\n"+response.stdErr());
