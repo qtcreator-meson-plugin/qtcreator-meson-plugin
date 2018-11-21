@@ -94,13 +94,14 @@ ProjectExplorer::BuildInfo *MesonBuildConfigurationFactory::createBuildInfo(cons
                                                                             const QString &projectPath,
                                                                             ProjectExplorer::BuildConfiguration::BuildType type) const
 {
-    ProjectExplorer::BuildInfo *info = new ProjectExplorer::BuildInfo(this);
+    MesonBuildInfo *info = new MesonBuildInfo(this);
     info->displayName = tr("Debug");
     QString suffix = tr("Debug", "Shadow build directory suffix");
 
     info->typeName = info->displayName;
-    // Leave info->buildDirectory unset;
+    info->buildDirectory = Utils::FileName::fromString(QFileInfo(projectPath).absolutePath()).appendPath("_build");
     info->kitId = k->id();
+    info->mesonPath = MesonProject::findDefaultMesonExecutable().toString();
 
     //info->buildType = type;
     return info;
