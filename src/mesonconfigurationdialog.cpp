@@ -35,72 +35,95 @@ MesonConfigurationDialog::MesonConfigurationDialog(const QJsonArray &json, const
     scroll->setWidget(form_wrap);
     scroll->setWidgetResizable(true);
 
-    const QVector<QPair<QString, QStringList>> categories = {
-        {"Core Options",     {"auto_features",
-                              "backend",
-                              "buildtype",
-                              "debug",
-                              "default_library",
-                              "install_umask",
-                              "layout",
-                              "optimization",
-                              "strip",
-                              "unity",
-                              "warning_level",
-                              "werror",
-                              "wrap_mode",}},
-        {"Backend Options",  {"backend_max_links"}},
-        {"Base Options",     {"b_asneeded",
-                              "b_colorout",
-                              "b_coverage",
-                              "b_lto",
-                              "b_lundef",
-                              "b_ndebug",
-                              "b_pch",
-                              "b_pgo",
-                              "b_pie",
-                              "b_sanitize",
-                              "b_staticpic",}},
-        {"Compiler options", {"cpp_args",
-                              "cpp_debugstl",
-                              "cpp_link_args",
-                              "cpp_std",
-                              "c_args",
-                              "c_link_args",
-                              "c_std",}},
-        {"Directories",      {"bindir",
-                              "datadir",
-                              "includedir",
-                              "infodir",
-                              "libdir",
-                              "libexecdir",
-                              "localedir",
-                              "localstatedir",
-                              "mandir",
-                              "prefix",
-                              "sbindir",
-                              "sharedstatedir",
-                              "sysconfdir",}},
-        {"Testing options",  {"errorlogs",
-                              "stdsplit",}},
+    const QVector<QPair<QString, QString>> categoryOrderAndNames = {
+        {"core", "Core Options"},
+        {"backend", "Backend Options"},
+        {"base", "Base Options"},
+        {"compiler", "Compiler Options"},
+        {"directory", "Directory Options"},
+        {"test", "Testing Options"},
+        {"user", "Project Options"},
     };
+
+    QMap<QString, QStringList> categoryOptions;
 
     for (const QJsonValue &val: json) {
         QJsonObject obj = val.toObject();
         const QString name = obj.value("name").toString();
-        const QString description = obj.value("description").toString();
-        const QString type = obj.value("type").toString();
+        if(obj.contains("section")) {
+            categoryOptions[obj.value("section").toString()].append(name);
+        }
 
         initialValues.insert(name, obj);
     }
 
+    // If the meson version is less than 0.49 there is no section attribute in the output
+    if(categoryOptions.isEmpty()) {
+        categoryOptions = QMap<QString, QStringList>({
+             {"core",      {"auto_features",
+                           "backend",
+                           "buildtype",
+                           "debug",
+                           "default_library",
+                           "install_umask",
+                           "layout",
+                           "optimization",
+                           "strip",
+                           "unity",
+                           "warning_level",
+                           "werror",
+                           "wrap_mode",}},
+            {"backend",   {"backend_max_links"}},
+            {"base",      {"b_asneeded",
+                           "b_colorout",
+                           "b_coverage",
+                           "b_lto",
+                           "b_lundef",
+                           "b_ndebug",
+                           "b_pch",
+                           "b_pgo",
+                           "b_pie",
+                           "b_sanitize",
+                           "b_staticpic",}},
+            {"compiler",  {"cpp_args",
+                           "cpp_debugstl",
+                           "cpp_link_args",
+                           "cpp_std",
+                           "c_args",
+                           "c_link_args",
+                           "c_std",}},
+            {"directory", {"bindir",
+                           "datadir",
+                           "includedir",
+                           "infodir",
+                           "libdir",
+                           "libexecdir",
+                           "localedir",
+                           "localstatedir",
+                           "mandir",
+                           "prefix",
+                           "sbindir",
+                           "sharedstatedir",
+                           "sysconfdir",}},
+            {"test",      {"errorlogs",
+                           "stdsplit",}},
+        });
+
+        QSet<QString> seenOptions;
+        for(const QStringList &options: categoryOptions.values()) {
+            seenOptions.unite(options.toSet());
+        }
+        QSet<QString> projectOptions = initialValues.keys().toSet()-seenOptions;
+        categoryOptions.insert("user", projectOptions.toList());
+    }
+
     QSet<QString> placedOptions;
 
-    for (const auto &categoryAndOptions: categories) {
-        addHeading(form, categoryAndOptions.first);
+    for (const auto &categoryAndName: categoryOrderAndNames) {
+        addHeading(form, categoryAndName.second);
 
         int added = 0;
-        for (const QString &option: categoryAndOptions.second) {
+        for (const QString &option: categoryOptions.value(categoryAndName.first)) {
             if (initialValues.contains(option)) {
                 QJsonObject obj = initialValues.value(option);
                 addControl(form, obj);
@@ -111,19 +134,6 @@ MesonConfigurationDialog::MesonConfigurationDialog(const QJsonArray &json, const
         if (added == 0) {
             form->removeRow(form->count()-1); // Kill the heading
         }
-    }
-
-    addHeading(form, tr("Project Options"));
-    int userOptions = 0;
-    for (const QJsonValue &val: json) {
-        QJsonObject obj = val.toObject();
-        if (!placedOptions.contains(obj.value("name").toString())) {
-            addControl(form, obj);
-            userOptions++;
-        }
-    }
-    if (userOptions == 0) {
-        form->removeRow(form->count()-1); // Kill the heading
     }
 
     QDialogButtonBox *dbb = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
