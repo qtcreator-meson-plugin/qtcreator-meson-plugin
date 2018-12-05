@@ -17,7 +17,7 @@
 namespace MesonProjectManager
 {
 
-MesonConfigurationDialog::MesonConfigurationDialog(const QJsonArray &json, const QString &projectName, QWidget *parent): QDialog (parent)
+MesonConfigurationDialog::MesonConfigurationDialog(const QJsonArray &json, const QString &projectName, const QString &buildDir, const bool isNew, QWidget *parent): QDialog (parent)
 {
     setWindowTitle(tr("Options for %1").arg(projectName));
 
@@ -116,6 +116,9 @@ MesonConfigurationDialog::MesonConfigurationDialog(const QJsonArray &json, const
         QSet<QString> projectOptions = initialValues.keys().toSet()-seenOptions;
         categoryOptions.insert("user", projectOptions.toList());
     }
+
+    addHeading(form, QString::fromUtf8(isNew ? "Configuring new build" : "Configuring existing build"));
+    addText(form, "Build Directory: "+buildDir);
 
     QSet<QString> placedOptions;
 
@@ -242,6 +245,12 @@ void MesonConfigurationDialog::addHeading(QFormLayout *form, const QString &name
     QLabel *lbl = new QLabel(name);
     form->addRow(new QWidget); // Add a spacer
     lbl->setStyleSheet(QStringLiteral("font-weight: bold;"));
+    form->setWidget(form->count(), QFormLayout::SpanningRole, lbl);
+}
+
+void MesonProjectManager::MesonConfigurationDialog::addText(QFormLayout *form, const QString &text)
+{
+    QLabel *lbl = new QLabel(text);
     form->setWidget(form->count(), QFormLayout::SpanningRole, lbl);
 }
 

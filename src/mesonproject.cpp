@@ -580,19 +580,27 @@ void MesonProject::editOptions()
         return;
     }
     MesonBuildConfiguration &cfg = *cfg_ptr;
-    auto response = proc.run(cfg.mesonPath(), {"introspect", "--buildoptions", cfg.buildDirectory().toString()});
+    const Utils::FileName buildDir = cfg.buildDirectory();
+    const bool buildConfigured = Utils::FileName(buildDir).appendPath("meson-private").appendPath("coredata.dat").exists();
+    const QString pathArg = buildConfigured ? buildDir.toString() : filename.toString();
+    auto response = proc.run(cfg.mesonPath(), {"introspect", "--buildoptions", pathArg});
     if (response.exitCode!=0) {
         QMessageBox::warning(nullptr, tr("Can't get buildoptions"), response.exitMessage(cfg.mesonPath(), proc.timeoutS())+"\n"+response.stdOut()+"\n\n"+response.stdErr());
         return;
     }
     const QString json = response.stdOut();
     QJsonDocument doc = QJsonDocument::fromJson(json.toUtf8());
-    MesonConfigurationDialog *dlg = new MesonConfigurationDialog(doc.array(), cfg.project()->displayName());
+    MesonConfigurationDialog *dlg = new MesonConfigurationDialog(doc.array(), cfg.project()->displayName(), buildDir.toString(), !buildConfigured);
     dlg->show();
 
-    connect(dlg, &QDialog::accepted, [this, dlg]{
+    connect(dlg, &QDialog::accepted, [this, dlg, buildConfigured]{
         MesonBuildConfiguration &cfg = *activeBuildConfiguration();
-        QStringList args = {"configure", cfg.buildDirectory().toString()};
+        QStringList args;
+        if(buildConfigured) {
+            args = QStringList{"configure", cfg.buildDirectory().toString()};
+        } else {
+            args = QStringList{"setup", filename.toFileInfo().absolutePath(), cfg.buildDirectory().toString()};
+        }
 
         for(const QJsonObject &obj: dlg->getChangedValues()) {
             const QString name = obj.value("name").toString();
