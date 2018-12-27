@@ -56,7 +56,8 @@ quint64 qHash(const CompileCommandInfo &info)
 
 bool CompileCommandInfo::operator==(const CompileCommandInfo &o) const
 {
-    return std::tie(defines, includes, cpp_std, id) == std::tie(o.defines, o.includes, o.cpp_std, id);
+    return std::tie(defines, includes, cpp_std, id, simplifiedCompilerParameters)
+            == std::tie(o.defines, o.includes, o.cpp_std, id, o.simplifiedCompilerParameters);
 }
 
 MesonProject::MesonProject(const Utils::FileName &filename):
@@ -461,6 +462,13 @@ const QHash<CompileCommandInfo, QStringList> MesonProject::parseCompileCommands(
             } else if (part == "-o") {
                 nextIsOutput = true;
             }
+
+            if (!part.startsWith("-o") // output file
+                    && part != "-c" // compilation mode
+                    && part != "-pipe" // noise
+                    && !part.startsWith("-M")) { // file specific dependency output flags
+                info.simplifiedCompilerParameters.append(part);
+            }
         }
 
         fileCodeCompletionHints[info].append(real_file);
@@ -557,6 +565,9 @@ void MesonProject::refreshCppCodeModel(const QHash<CompileCommandInfo, QStringLi
         for (const auto &key: info.defines.keys())
             macros.append(ProjectExplorer::Macro(key.toUtf8(), info.defines[key].toUtf8()));
         rpp.setMacros(macros);
+        CppTools::RawProjectPartFlags rppf{cxxToolChain, info.simplifiedCompilerParameters};
+        rpp.setFlagsForCxx(rppf);
+        rpp.setFlagsForC(rppf);
         rpp.setFiles(files);
 
         parts.append(rpp);

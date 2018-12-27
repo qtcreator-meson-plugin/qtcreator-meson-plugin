@@ -28,6 +28,8 @@ public:
     QString cpp_std;
     QString id;
 
+    QStringList simplifiedCompilerParameters;
+
     bool operator==(const CompileCommandInfo &o) const;
 };
 
