@@ -445,7 +445,7 @@ const QHash<CompileCommandInfo, QStringList> MesonProject::parseCompileCommands(
 
             if (part.startsWith("-D")) {
                 const QString value = part.mid(2);
-                info.defines.insert(value.section("=", 0, 1), value.section("=", 1, -1));
+                info.defines.insert(value.section("=", 0, 0), value.section("=", 1, -1));
             } else if (part.startsWith("-U")) {
                 info.defines.remove(part.mid(2));
             } else if (part.startsWith("-I")) {
