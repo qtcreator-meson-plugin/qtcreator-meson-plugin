@@ -14,6 +14,7 @@
 #include <cpptools/cpptoolsconstants.h>
 #include <cpptools/cppmodelmanager.h>
 #include <cpptools/projectinfo.h>
+#include <cpptools/cpprawprojectpart.h>
 #include <cpptools/cppprojectupdater.h>
 
 #include <projectexplorer/projectimporter.h>

@@ -7,6 +7,8 @@
 #include <QMap>
 #include <QVector>
 
+#include <functional>
+
 namespace MesonProjectManager
 {
 
