@@ -417,7 +417,6 @@ const QHash<CompileCommandInfo, QStringList> MesonProject::parseCompileCommands(
         }
 
         CompileCommandInfo info;
-        info.includes.append("/usr/include/");
 
         bool nextIsOutput = false;
 
