@@ -195,7 +195,7 @@ bool MesonProjectWizard::postGenerateFiles(const QWizard *w, const Core::Generat
     {
         MesonProject proj(Utils::FileName::fromString(l.first().path()));
         ProjectExplorer::Kit *kit = ProjectExplorer::KitManager::instance()->defaultKit();
-        ProjectExplorer::Target *target = proj.createTarget(kit);
+        auto target = proj.createTarget(kit);
         MesonBuildConfigurationFactory factory;
 
         MesonBuildInfo buildInfo(&factory);
@@ -205,10 +205,10 @@ bool MesonProjectWizard::postGenerateFiles(const QWizard *w, const Core::Generat
         buildInfo.typeName = buildInfo.displayName;
         buildInfo.mesonPath = mesonBin.toString();
 
-        ProjectExplorer::BuildConfiguration *cfg = factory.create(target, &buildInfo);
+        ProjectExplorer::BuildConfiguration *cfg = factory.create(target.get(), &buildInfo);
         target->addBuildConfiguration(cfg);
 
-        proj.addTarget(target);
+        proj.addTarget(std::move(target));
         proj.saveSettings();
     }
 

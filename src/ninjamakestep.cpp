@@ -12,6 +12,7 @@
 #include <projectexplorer/projectexplorerconstants.h>
 #include <projectexplorer/target.h>
 #include <projectexplorer/toolchain.h>
+#include <utils/qtcprocess.h>
 
 namespace MesonProjectManager {
 
@@ -147,11 +148,6 @@ void NinjaMakeStep::run(QFutureInterface<bool> &fi)
 ProjectExplorer::BuildStepConfigWidget *NinjaMakeStep::createConfigWidget()
 {
     return new NinjaMakeStepConfigWidget(this);
-}
-
-bool NinjaMakeStep::immutable() const
-{
-    return false;
 }
 
 bool NinjaMakeStep::buildsTarget(const QString &target) const

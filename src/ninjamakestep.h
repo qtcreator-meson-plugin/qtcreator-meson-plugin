@@ -1,6 +1,7 @@
 #pragma once
 
 #include <projectexplorer/abstractprocessstep.h>
+#include <utils/environment.h>
 
 namespace MesonProjectManager {
 
@@ -19,10 +20,10 @@ public:
     void run(QFutureInterface<bool> &fi) override;
 
     ProjectExplorer::BuildStepConfigWidget *createConfigWidget() override;
-    bool immutable() const override;
     bool buildsTarget(const QString &target) const;
     void setBuildTarget(const QString &target, bool on);
     QString allArguments() const;
+
     QString ninjaCommand(const Utils::Environment &environment) const;
 
     void setClean(bool clean);
@@ -51,14 +52,12 @@ private:
 
 class NinjaMakeAllStepFactory : public ProjectExplorer::BuildStepFactory
 {
-    Q_OBJECT
 public:
     NinjaMakeAllStepFactory();
 };
 
 class NinjaMakeCleanStepFactory: public ProjectExplorer::BuildStepFactory
 {
-    Q_OBJECT
 public:
     NinjaMakeCleanStepFactory();
 };

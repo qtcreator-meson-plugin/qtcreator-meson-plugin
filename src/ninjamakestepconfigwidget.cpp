@@ -3,7 +3,8 @@
 namespace MesonProjectManager
 {
 
-NinjaMakeStepConfigWidget::NinjaMakeStepConfigWidget(NinjaMakeStep *makeStep): step(makeStep)
+NinjaMakeStepConfigWidget::NinjaMakeStepConfigWidget(NinjaMakeStep *makeStep):
+    ProjectExplorer::BuildStepConfigWidget{makeStep},step(makeStep)
 {
     QFormLayout *layout = new QFormLayout();
     setLayout(layout);
