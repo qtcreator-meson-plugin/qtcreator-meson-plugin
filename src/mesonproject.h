@@ -29,8 +29,32 @@ public:
     QString id;
 
     QStringList simplifiedCompilerParameters;
+    QStringList files;
 
     bool operator==(const CompileCommandInfo &o) const;
+};
+
+enum class TargetType {
+    Executable,
+    StaticLibrary,
+    DynamicLibrary,
+    SharedModule,
+};
+
+struct SourceSetInfo {
+    QString language;
+    QStringList compiler;
+    QStringList parameters;
+    QStringList sources;
+    QStringList generatedSources;
+};
+
+struct TargetInfo {
+    QString targetName;
+    QString targetId;
+    TargetType type;
+    QString definedIn;
+    QVector<SourceSetInfo> sourceSets;
 };
 
 class MesonFileNode;
@@ -53,10 +77,11 @@ public:
     void mesonIntrospectBuildsytemFiles(const MesonBuildConfiguration &cfg, MesonProjectNode *root);
     void mesonIntrospectProjectInfo(const MesonBuildConfiguration &cfg);
     bool mesonIntrospectProjectInfoFromSource(const MesonBuildConfiguration *cfg, MesonProjectNode *root);
-    const QHash<CompileCommandInfo, QStringList> parseCompileCommands(const MesonBuildConfiguration &cfg) const;
-    QHash<CompileCommandInfo, QStringList> rewritePaths(const PathResolver::DirectoryInfo &base, const QHash<CompileCommandInfo, QStringList> &input) const;
+    const QVector<CompileCommandInfo> parseCompileCommands(const MesonBuildConfiguration &cfg, const QVector<TargetInfo> &targetInfos) const;
+    QVector<CompileCommandInfo> rewritePaths(const PathResolver::DirectoryInfo &base, const QVector<CompileCommandInfo> &input) const;
+    QVector<TargetInfo> readMesonInfoTargets(const MesonBuildConfiguration &cfg);
 
-    void refreshCppCodeModel(const QHash<CompileCommandInfo, QStringList> &);
+    void refreshCppCodeModel(const QVector<CompileCommandInfo> &);
 
     bool canConfigure();
     void editOptions();

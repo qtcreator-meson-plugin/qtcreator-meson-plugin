@@ -113,14 +113,15 @@ void MesonProject::refresh()
         }
     }
 
-    QHash<CompileCommandInfo, QStringList> codeModelInfo;
+    QVector<CompileCommandInfo> codeModelInfos;
     if (cfg) {
-        codeModelInfo = parseCompileCommands(*cfg);
-        codeModelInfo = rewritePaths(root->getBaseDirectoryInfo(), codeModelInfo);
+        QVector<TargetInfo> targetInfos = readMesonInfoTargets(*cfg);
+        codeModelInfos = parseCompileCommands(*cfg, targetInfos);
+        codeModelInfos = rewritePaths(root->getBaseDirectoryInfo(), codeModelInfos);
 
         QSet<QString> allFiles;
-        for (const QStringList &list: codeModelInfo.values()) {
-            allFiles += QSet<QString>::fromList(list);
+        for (const CompileCommandInfo &info: codeModelInfos) {
+            allFiles += QSet<QString>::fromList(info.files);
         }
         const QSet<QString> extraFiles = allFiles - filesInEditableGroups;
 
@@ -155,7 +156,7 @@ void MesonProject::refresh()
     }
     setRootProjectNode(move(root));
 
-    refreshCppCodeModel(codeModelInfo);
+    refreshCppCodeModel(codeModelInfos);
 
     emitParsingFinished(true);
 }
@@ -373,112 +374,76 @@ Utils::FileName MesonProject::findDefaultMesonExecutable()
     return mesonBin;
 }
 
-const QHash<CompileCommandInfo, QStringList> MesonProject::parseCompileCommands(const MesonBuildConfiguration &cfg) const
+const QVector<CompileCommandInfo> MesonProject::parseCompileCommands(const MesonBuildConfiguration &cfg, const QVector<TargetInfo> &targetInfos) const
 {
-    QHash<CompileCommandInfo, QStringList> fileCodeCompletionHints;
+    QVector<CompileCommandInfo> compileCommandInfos;
 
-    Utils::FileName compileCommandsFileName = cfg.buildDirectory().appendPath("compile_commands.json");
-    QFile compileCommandsFile(compileCommandsFileName.toString());
-    if (!compileCommandsFile.open(QIODevice::ReadOnly | QIODevice::Text))
-        return {};
-    QJsonArray json = QJsonDocument::fromJson(compileCommandsFile.readAll()).array();
-    for (const QJsonValue& value: json) {
-        QJsonObject obj = value.toObject();
-        if (!obj.contains("directory") || !obj.contains("command") || !obj.contains("file"))
-            continue;
-        const QString dir = obj.value("directory").toString();
-        const QString cmd = obj.value("command").toString();
-        const QString file = obj.value("file").toString();
-        const QString real_file = QFileInfo(dir+"/"+file).canonicalFilePath();
+    for (const TargetInfo &info: targetInfos) {
+        for (const SourceSetInfo &ssi: info.sourceSets) {
+            CompileCommandInfo info;
+            info.files = ssi.sources + ssi.generatedSources;
 
-        QStringList parts;
-        int wstart=0, ofs=0;
-        bool in_quote=false;
-        while (ofs<cmd.size()) {
-            const QChar c=cmd.at(ofs);
-            if (c==' ' && !in_quote) {
-                if (ofs-wstart>0)
-                    parts.append(cmd.mid(wstart, ofs-wstart));
-                ofs++;
-                wstart=ofs;
-                continue;
-            } else if (c=='\'') {
-                if (in_quote) {
-                    in_quote=false;
-                    parts.append(cmd.mid(wstart+1, ofs-wstart-1));
-                    ofs++;
-                    wstart=ofs;
-                    continue;
-                } else {
-                    in_quote=true;
-                }
-            }
-            ofs++;
-        }
+            bool nextIsOutput = false;
 
-        CompileCommandInfo info;
+            for (const QString &part: ssi.parameters) {
+                /*
+                "c++  -Irule_system@exe -I. -I.. -I../ChaiScript-6.0.0/include -fdiagnostics-color=always
+                -pipe -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -Wnon-virtual-dtor -O0 -g -std=c++14 -pthread
+                -MMD -MQ 'rule_system@exe/main.cpp.o' -MF 'rule_system@exe/main.cpp.o.d'
+                -o 'rule_system@exe/main.cpp.o' -c ../main.cpp"
+                */
 
-        bool nextIsOutput = false;
-
-        for (const QString &part: parts) {
-            /*
-            "c++  -Irule_system@exe -I. -I.. -I../ChaiScript-6.0.0/include -fdiagnostics-color=always
-            -pipe -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -Wnon-virtual-dtor -O0 -g -std=c++14 -pthread
-            -MMD -MQ 'rule_system@exe/main.cpp.o' -MF 'rule_system@exe/main.cpp.o.d'
-            -o 'rule_system@exe/main.cpp.o' -c ../main.cpp"
-            */
-
-            if (nextIsOutput) {
-                QStringList pp = part.split('/');
-                for (const QString &p: pp) {
-                    if (p.contains('@')) {
-                        info.id = p;
-                        break;
+                if (nextIsOutput) {
+                    QStringList pp = part.split('/');
+                    for (const QString &p: pp) {
+                        if (p.contains('@')) {
+                            info.id = p;
+                            break;
+                        }
                     }
+                    nextIsOutput = false;
+                    continue;
                 }
-                nextIsOutput = false;
-                continue;
-            }
 
-            if (!part.startsWith("-"))
-                continue;
+                if (!part.startsWith("-"))
+                    continue;
 
-            if (part.startsWith("-D")) {
-                const QString value = part.mid(2);
-                info.defines.insert(value.section("=", 0, 0), value.section("=", 1, -1));
-            } else if (part.startsWith("-U")) {
-                info.defines.remove(part.mid(2));
-            } else if (part.startsWith("-I")) {
-                QString idir = part.mid(2);
-                if (!idir.startsWith("/")) {
-                    idir = dir + "/" + idir;
+                if (part.startsWith("-D")) {
+                    const QString value = part.mid(2);
+                    info.defines.insert(value.section("=", 0, 0), value.section("=", 1, -1));
+                } else if (part.startsWith("-U")) {
+                    info.defines.remove(part.mid(2));
+                } else if (part.startsWith("-I")) {
+                    QString idir = part.mid(2);
+                    if (!idir.startsWith("/")) {
+                        idir = cfg.buildDirectory().toString() + "/" + idir;
+                    }
+                    if (!idir.endsWith("/"))
+                        idir.append("/");
+                    info.includes.append(idir);
+                } else if (part.startsWith("-std")) {
+                    info.cpp_std = part.mid(5);
+                } else if (part == "-o") {
+                    nextIsOutput = true;
                 }
-                if (!idir.endsWith("/"))
-                    idir.append("/");
-                info.includes.append(idir);
-            } else if (part.startsWith("-std")) {
-                info.cpp_std = part.mid(5);
-            } else if (part == "-o") {
-                nextIsOutput = true;
-            }
 
-            if (!part.startsWith("-o") // output file
-                    && part != "-c" // compilation mode
-                    && part != "-pipe" // noise
-                    && !part.startsWith("-M")) { // file specific dependency output flags
-                info.simplifiedCompilerParameters.append(part);
+                if (!part.startsWith("-o") // output file
+                        && part != "-c" // compilation mode
+                        && part != "-pipe" // noise
+                        && !part.startsWith("-M")) { // file specific dependency output flags
+                    info.simplifiedCompilerParameters.append(part);
+                }
             }
+            compileCommandInfos.append(info);
         }
-
-        fileCodeCompletionHints[info].append(real_file);
     }
 
-    return fileCodeCompletionHints;
+    return compileCommandInfos;
 }
 
-QHash<CompileCommandInfo, QStringList> MesonProject::rewritePaths(const PathResolver::DirectoryInfo &base, const QHash<CompileCommandInfo, QStringList> &input) const
+QVector<CompileCommandInfo> MesonProject::rewritePaths(const PathResolver::DirectoryInfo &base, const QVector<CompileCommandInfo> &input) const
 {
-    QHash<CompileCommandInfo, QStringList> out;
+    QVector<CompileCommandInfo> out;
 
     auto processStringList = [this,base](const QStringList &list)
     {
@@ -491,13 +456,69 @@ QHash<CompileCommandInfo, QStringList> MesonProject::rewritePaths(const PathReso
         return out;
     };
 
-    for(auto it=input.cbegin(); it!=input.cend(); it++) {
-        CompileCommandInfo cci = it.key();
+    for (CompileCommandInfo cci: input) {
         cci.includes = processStringList(cci.includes);
-        out.insert(cci, processStringList(it.value()));
+        cci.files = processStringList(cci.files);
+        out.append(cci);
     }
 
     return out;
+}
+
+QVector<TargetInfo> MesonProject::readMesonInfoTargets(const MesonBuildConfiguration &cfg)
+{
+    Utils::FileName mesonInfoTargetsFileName = cfg.buildDirectory().appendPath("meson-info/intro-targets.json");
+    if (!mesonInfoTargetsFileName.exists()) {
+        return {};
+    }
+
+    QFile data(mesonInfoTargetsFileName.toString());
+    if (!data.open(QIODevice::ReadOnly)) {
+        return {};
+    }
+
+    const QMap<QString, TargetType> allowedTargetTypes = {
+        {"executable", TargetType::Executable},
+        {"shared library", TargetType::StaticLibrary},
+        {"static library", TargetType::DynamicLibrary},
+        {"shared module", TargetType::SharedModule},
+    };
+
+    QVector<TargetInfo> targets;
+    QJsonArray rawTargets = QJsonDocument::fromJson(data.readAll()).array();
+    for (const QJsonValue entry: rawTargets) {
+        const QJsonObject target = entry.toObject();
+        if (!allowedTargetTypes.contains(target.value("type").toString()))
+            continue;
+        TargetInfo t;
+        t.targetName = target.value("name").toString();
+        t.targetId = target.value("id").toString();
+        t.type = allowedTargetTypes.value(target.value("type").toString());
+        t.definedIn = target.value("defined_in").toString();
+
+        auto jsonArrayToStringList = [](const QJsonArray arr) -> QStringList {
+            QStringList strings;
+            for (const QJsonValue val: arr) {
+                strings.append(val.toString());
+            }
+            return strings;
+        };
+
+        QJsonArray sourceSets = target.value("target_sources").toArray();
+        for(const QJsonValue entry: sourceSets) {
+            const QJsonObject set = entry.toObject();
+            SourceSetInfo s;
+            s.language = set.value("language").toString();
+            s.compiler = jsonArrayToStringList(set.value("compiler").toArray());
+            s.parameters = jsonArrayToStringList(set.value("parameters").toArray());
+            s.sources = jsonArrayToStringList(set.value("sources").toArray());
+            s.generatedSources = jsonArrayToStringList(set.value("generated_sources").toArray());
+            t.sourceSets.append(s);
+        }
+        targets.append(t);
+    }
+
+    return targets;
 }
 
 /*bool MesonProject::supportsKit(ProjectExplorer::Kit *k, QString *errorMessage) const
@@ -532,7 +553,7 @@ void MesonProject::configureAsExampleProject(const QSet<Core::Id> &platforms)
     return false;
 }*/
 
-void MesonProject::refreshCppCodeModel(const QHash<CompileCommandInfo, QStringList> &fileCodeCompletionHints)
+void MesonProject::refreshCppCodeModel(const QVector<CompileCommandInfo> &fileCodeCompletionHints)
 {
     const ProjectExplorer::Kit *k = nullptr;
     if (ProjectExplorer::Target *target = activeTarget())
@@ -552,9 +573,7 @@ void MesonProject::refreshCppCodeModel(const QHash<CompileCommandInfo, QStringLi
 
     QVector<CppTools::RawProjectPart> parts;
     int i=1;
-    for (const CompileCommandInfo &info: fileCodeCompletionHints.keys()) {
-        const QStringList &files = fileCodeCompletionHints.value(info);
-
+    for (const CompileCommandInfo &info: fileCodeCompletionHints) {
         CppTools::RawProjectPart rpp;
         rpp.setDisplayName(info.id + QStringLiteral(" Part %1").arg(QString::number(i)));
         rpp.setProjectFileLocation(projectFilePath().toString());
@@ -567,7 +586,7 @@ void MesonProject::refreshCppCodeModel(const QHash<CompileCommandInfo, QStringLi
         CppTools::RawProjectPartFlags rppf{cxxToolChain, info.simplifiedCompilerParameters};
         rpp.setFlagsForCxx(rppf);
         rpp.setFlagsForC(rppf);
-        rpp.setFiles(files);
+        rpp.setFiles(info.files);
 
         parts.append(rpp);
         i++;
