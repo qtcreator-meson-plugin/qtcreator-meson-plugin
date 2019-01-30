@@ -4,6 +4,7 @@
 
 namespace MesonProjectManager {
 
+// Use for subfolders in FileListNodes
 class MesonFileSubFolderNode: public ProjectExplorer::FolderNode
 {
 public:

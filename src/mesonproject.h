@@ -1,8 +1,8 @@
 #pragma once
 
 #include "mesonbuildfileparser.h"
-#include "mesonprojectnode.h"
 #include "mesonbuildconfiguration.h"
+#include "nodes.h"
 #include "pathresolver.h"
 
 #include <cpptools/cppprojectupdater.h>
@@ -14,6 +14,7 @@
 #include <QFutureInterface>
 #include <QTimer>
 #include <QFuture>
+#include <QJsonArray>
 
 #include <memory>
 
@@ -49,15 +50,36 @@ struct SourceSetInfo {
     QStringList generatedSources;
 };
 
+struct EditableList {
+    QString name;
+    std::shared_ptr<MesonBuildFileParser> parser;
+};
+
 struct TargetInfo {
     QString targetName;
     QString targetId;
     TargetType type;
     QString definedIn;
     QVector<SourceSetInfo> sourceSets;
+    QVector<EditableList> editableLists;
+    QSet<QString> sourcesInTarget;
+    QSet<QString> extraFiles;
 };
 
-class MesonFileNode;
+struct IntroSubProject
+{
+    QString name;
+    QString version;
+    QStringList buildsystemFiles;
+    QVector<TargetInfo> targets;
+    QString baseDir;
+};
+
+struct IntroProject: public IntroSubProject
+{
+    QString subprojectsDir;
+    QVector<IntroSubProject> subprojects;
+};
 
 class MesonProject : public ProjectExplorer::Project
 {
@@ -65,7 +87,7 @@ class MesonProject : public ProjectExplorer::Project
 
 public:
     explicit MesonProject(const Utils::FileName &proFile);
-    virtual ~MesonProject();
+    ~MesonProject() override;
 
     bool setupTarget(ProjectExplorer::Target *t) override;
     QStringList filesGeneratedFrom(const QString &sourceFile) const override;
@@ -74,9 +96,7 @@ public:
     //bool requiresTargetPanel() const override;
     ProjectExplorer::ProjectImporter *projectImporter() const override;
 
-    void mesonIntrospectBuildsytemFiles(const MesonBuildConfiguration &cfg, MesonProjectNode *root);
-    void mesonIntrospectProjectInfo(const MesonBuildConfiguration &cfg);
-    bool mesonIntrospectProjectInfoFromSource(const MesonBuildConfiguration *cfg, MesonProjectNode *root);
+    IntroProject mesonIntrospectProjectInfoFromSource(const MesonBuildConfiguration *cfg);
     const QVector<CompileCommandInfo> parseCompileCommands(const MesonBuildConfiguration &cfg, const QVector<TargetInfo> &targetInfos) const;
     QVector<CompileCommandInfo> rewritePaths(const PathResolver::DirectoryInfo &base, const QVector<CompileCommandInfo> &input) const;
     QVector<TargetInfo> readMesonInfoTargets(const MesonBuildConfiguration &cfg);
@@ -86,20 +106,17 @@ public:
     bool canConfigure();
     void editOptions();
 
-    QSet<QString> filesInEditableGroups;
     PathResolver pathResolver;
 
-    MesonProjectManager::MesonFileNode* createMesonFileNode(ProjectExplorer::FolderNode *parentNode, QString parentRelativeName, Utils::FileName absoluteFileName);
-    void createOtherBuildsystemFileNode(ProjectExplorer::FolderNode *parentNode, Utils::FileName absoluteFilename);
-    ProjectExplorer::FolderNode *createSubProjectsNode(ProjectExplorer::FolderNode *parentNode);
-    void addNestedNodes(ProjectExplorer::FolderNode *root, const QJsonObject &json, int displayNameSkip);
-
     static Utils::FileName findDefaultMesonExecutable();
+    static void regenerateProjectFiles(MesonBuildFileParser *parser);
 
 private:
+    static QStringList jsonArrayToStringList(const QJsonArray arr);
     MesonBuildConfiguration *activeBuildConfiguration();
     const Utils::FileName filename;
     CppTools::CppProjectUpdater *cppCodeModelUpdater = nullptr;
+    std::vector<std::unique_ptr<ProjectExplorer::ProjectDocument>> projectDocuments;
 
 protected:
     RestoreResult fromMap(const QVariantMap &map, QString *errorMessage) override;

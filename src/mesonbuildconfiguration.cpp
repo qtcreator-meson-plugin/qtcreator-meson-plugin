@@ -38,7 +38,7 @@ void MesonBuildConfiguration::initialize(const ProjectExplorer::BuildInfo *info)
     ProjectExplorer::BuildStepList *cleanSteps = stepList(ProjectExplorer::Constants::BUILDSTEPS_CLEAN);
     cleanSteps->appendStep(new NinjaMakeStep(cleanSteps, "clean"));
 
-    const MesonBuildInfo *mInfo = static_cast<const MesonBuildInfo *>(info);
+    const MesonBuildInfo *mInfo = dynamic_cast<const MesonBuildInfo *>(info);
     setMesonPath(mInfo->mesonPath);
 
     updateCacheAndEmitEnvironmentChanged();
@@ -136,7 +136,7 @@ QList<ProjectExplorer::BuildInfo *> MesonBuildConfigurationFactory::availableSet
     ProjectExplorer::BuildInfo *info = createBuildInfo(k, projectPath, ProjectExplorer::BuildConfiguration::BuildType::Unknown);
     //: The name of the build configuration created by default for a generic project.
     info->displayName = tr("Default");
-    result << info;
+    result.append(info);
     return result;
 }
 

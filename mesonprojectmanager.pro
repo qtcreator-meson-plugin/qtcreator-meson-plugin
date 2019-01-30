@@ -13,15 +13,14 @@ SOURCES += \
     src/mesonprojectimporter.cpp \
     src/filelistnode.cpp \
     src/mesonbuildfileparser.cpp \
-    src/mesonprojectnode.cpp \
-    src/mesonprojectpartmanager.cpp \
-    src/mesonfilenode.cpp \
     src/mesonfilesubfoldernode.cpp \
     src/mesonproject.cpp \
     src/fixdirectoryparser.cpp \
     src/mesonprojectwizard.cpp \
     src/pathresolver.cpp \
-    src/mesonconfigurationdialog.cpp
+    src/mesonconfigurationdialog.cpp \
+    src/treebuilder.cpp \
+    src/nodes.cpp
 
 HEADERS += \
     src/ninjamakestep.h \
@@ -33,15 +32,14 @@ HEADERS += \
     src/mesonprojectimporter.h \
     src/filelistnode.h \
     src/mesonbuildfileparser.h \
-    src/mesonprojectnode.h \
-    src/mesonprojectpartmanager.h \
-    src/mesonfilenode.h \
     src/mesonfilesubfoldernode.h \
     src/mesonproject.h \
     src/fixdirectoryparser.h \
     src/mesonprojectwizard.h \
     src/pathresolver.h \
-    src/mesonconfigurationdialog.h
+    src/mesonconfigurationdialog.h \
+    src/treebuilder.h \
+    src/nodes.h
 
 # Qt Creator linking
 

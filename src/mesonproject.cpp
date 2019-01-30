@@ -1,7 +1,7 @@
 #include "mesonproject.h"
 #include "constants.h"
 #include "filelistnode.h"
-#include "mesonfilenode.h"
+#include "nodes.h"
 #include "mesonbuildconfiguration.h"
 #include "mesonprojectimporter.h"
 
@@ -46,6 +46,8 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QMessageBox>
+
+#include "treebuilder.h"
 
 namespace MesonProjectManager {
 
@@ -102,58 +104,54 @@ void MesonProject::refresh()
 
     MesonBuildConfiguration *cfg = activeBuildConfiguration();
 
-    // Stuff stolen from genericproject::refresh
-    auto root = std::make_unique<MesonProjectNode>(this, filename);
+    auto root = std::make_unique<MesonRootProjectNode>(this);
 
-    if(!mesonIntrospectProjectInfoFromSource(cfg, root.get())) {
-        // Fallback for meson without introspection without build directory
-        if (cfg) {
-            mesonIntrospectBuildsytemFiles(*cfg, root.get());
-            mesonIntrospectProjectInfo(*cfg);
-        }
+    IntroProject introProject = mesonIntrospectProjectInfoFromSource(cfg);
+
+    projectDocuments.clear();
+    for(const QString &name: introProject.buildsystemFiles) {
+        const QString file = introProject.baseDir + "/" + name;
+
+        projectDocuments.emplace_back(std::make_unique<ProjectExplorer::ProjectDocument>(MesonProjectManager::PROJECT_MIMETYPE, filename, [this] {
+            refresh();
+        }));
     }
+
+    QString buildDir;
+    if (cfg) {
+        QMap<QString, IntroSubProject*> lookup;
+        for(const QString &f: introProject.buildsystemFiles) {
+            lookup.insert(f, &introProject);
+        }
+        for(IntroSubProject &sub: introProject.subprojects) {
+            for(const QString &f: sub.buildsystemFiles) {
+                lookup.insert(f, &sub);
+            }
+        }
+
+        QVector<TargetInfo> targetInfos = readMesonInfoTargets(*cfg);
+        for(const TargetInfo &target: targetInfos) {
+            if(!lookup.contains(target.definedIn))
+                continue;
+
+            IntroSubProject *p = lookup.value(target.definedIn);
+            p->targets.append(target);
+        }
+
+        buildDir = cfg->buildDirectory().toString();
+    }
+
+    TreeBuilder builder(this, introProject);
+    builder.build(root.get(), buildDir);
 
     QVector<CompileCommandInfo> codeModelInfos;
     if (cfg) {
+        PathResolver::DirectoryInfo projectBaseDirectoryInfo = pathResolver.getForPath(filename.toFileInfo().absolutePath());
         QVector<TargetInfo> targetInfos = readMesonInfoTargets(*cfg);
         codeModelInfos = parseCompileCommands(*cfg, targetInfos);
-        codeModelInfos = rewritePaths(root->getBaseDirectoryInfo(), codeModelInfos);
-
-        QSet<QString> allFiles;
-        for (const CompileCommandInfo &info: codeModelInfos) {
-            allFiles += QSet<QString>::fromList(info.files);
-        }
-        const QSet<QString> extraFiles = allFiles - filesInEditableGroups;
-
-        const Utils::FileName projectBase = filename.parentDir();
-        QString buildDirectory = cfg->buildDirectory().toString();
-        if (!buildDirectory.endsWith('/')) buildDirectory += "/";
-        auto extraFileNode = std::make_unique<ProjectExplorer::VirtualFolderNode>(projectBase, 0);
-        extraFileNode->setDisplayName("Extra Files");
-        auto generatedFileNode = std::make_unique<ProjectExplorer::VirtualFolderNode>(cfg->buildDirectory(), 0);
-        generatedFileNode->setDisplayName("Generated Files");
-        for(const auto &fname: extraFiles) {
-            if (fname.isEmpty())
-                continue;
-
-            ProjectExplorer::VirtualFolderNode *node = extraFileNode.get();
-            bool generated = false;
-            if (fname.startsWith(buildDirectory)) {
-                node = generatedFileNode.get();
-                generated = true;
-            }
-
-            node->addNestedNode(std::make_unique<ProjectExplorer::FileNode>(Utils::FileName::fromString(fname),
-                                                                            ProjectExplorer::FileType::Source, generated));
-            const QStringList headers = getAllHeadersFor(fname);
-            for (const QString &header: headers) {
-                node->addNestedNode(std::make_unique<ProjectExplorer::FileNode>(Utils::FileName::fromString(header),
-                                                                                ProjectExplorer::FileType::Header, generated));
-            }
-        }
-        root->addNode(move(extraFileNode));
-        root->addNode(move(generatedFileNode));
+        codeModelInfos = rewritePaths(projectBaseDirectoryInfo, codeModelInfos);
     }
+
     setRootProjectNode(move(root));
 
     refreshCppCodeModel(codeModelInfos);
@@ -161,165 +159,10 @@ void MesonProject::refresh()
     emitParsingFinished(true);
 }
 
-class SubProjectsNode : public ProjectExplorer::FolderNode
+IntroProject MesonProject::mesonIntrospectProjectInfoFromSource(const MesonBuildConfiguration *cfg)
 {
-public:
-    explicit SubProjectsNode(const Utils::FileName &folderPath, ProjectExplorer::NodeType nodeType = ProjectExplorer::NodeType::Folder,
-                        const QString &displayName = QString(), const QByteArray &id = {}) :
-        ProjectExplorer::FolderNode(folderPath, nodeType, displayName, id)
-    {
-        setPriority(-100000);
-    }
-};
+    IntroProject project;
 
-MesonFileNode* MesonProject::createMesonFileNode(ProjectExplorer::FolderNode *parentNode, QString parentRelativeName, Utils::FileName absoluteFileName)
-{
-    const QString displayName = parentRelativeName.mid(0, parentRelativeName.size() - 12); // Remove /meson.build suffix
-    auto mfn = std::make_unique<MesonFileNode>(this, absoluteFileName);
-    mfn->setDisplayName(displayName);
-    MesonFileNode *out = mfn.get();
-    parentNode->addNode(move(mfn));
-    return out;
-}
-
-void MesonProject::createOtherBuildsystemFileNode(ProjectExplorer::FolderNode *parentNode, Utils::FileName absoluteFilename)
-{
-    parentNode->addNestedNode(std::make_unique<ProjectExplorer::FileNode>(absoluteFilename, ProjectExplorer::FileType::Project, false),
-    {}, [](const Utils::FileName &fn) {
-        auto node = std::make_unique<ProjectExplorer::FolderNode>(fn);
-        //node->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_ui.png"));
-        return node;
-    });
-}
-
-ProjectExplorer::FolderNode* MesonProject::createSubProjectsNode(ProjectExplorer::FolderNode *parentNode)
-{
-    Utils::FileName fnSubprojects = Utils::FileName::fromString(filename.parentDir().appendPath("subprojects").toString());
-    ProjectExplorer::FolderNode *subprojects = new SubProjectsNode(fnSubprojects, ProjectExplorer::NodeType::Folder, "subprojects");
-    subprojects->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_qt.png"));
-    parentNode->addNode(std::unique_ptr<ProjectExplorer::FolderNode>(subprojects));
-    return subprojects;
-}
-
-void MesonProject::mesonIntrospectBuildsytemFiles(const MesonBuildConfiguration &cfg, MesonProjectNode *root)
-{
-    Utils::SynchronousProcess proc;
-    proc.setTimeoutS(100);
-    auto response = proc.run(cfg.mesonPath(), {"introspect", cfg.buildDirectory().toString(), "--buildsystem-files"});
-    if (response.exitCode!=0) {
-        ProjectExplorer::TaskHub::addTask(ProjectExplorer::Task::Error,
-                                          QStringLiteral("Can't introspect buildsystem-files list. %1")
-                                          .arg(response.exitMessage(cfg.mesonPath(), proc.timeoutS())),
-                                          ProjectExplorer::Constants::TASK_CATEGORY_BUILDSYSTEM,
-                                          cfg.buildDirectory());
-
-        Core::MessageManager::write(response.allOutput());
-        return;
-    }
-
-    ProjectExplorer::FolderNode *subprojects = nullptr;
-
-    QMap<QString, MesonFileNode*> subdirectories;
-
-    QJsonArray json = QJsonDocument::fromJson(response.allRawOutput()).array();
-    for (QJsonValue v: json) {
-        QString file = v.toString();
-        if (file == "meson.build") continue;
-
-        ProjectExplorer::FolderNode *baseNode = root;
-        Utils::FileName absoluteFilename = Utils::FileName::fromString(filename.parentDir().appendPath(file).toString());
-        QString parentRelativeName = file;
-
-        int longestMatch = 0;
-        for (QString subdir : subdirectories.keys()) {
-            if (file.startsWith(subdir)) {
-                baseNode = subdirectories[subdir];
-                longestMatch = subdir.size();
-            }
-        }
-        if (longestMatch) {
-            parentRelativeName = parentRelativeName.mid(longestMatch);
-        }
-
-        if (file.startsWith("subprojects/")) {
-            if (!subprojects) {
-                subprojects = createSubProjectsNode(root);
-            }
-            if (baseNode == root) {
-                baseNode = subprojects;
-                parentRelativeName = parentRelativeName.mid(12); // Remove subprojects/ prefix
-            }
-        }
-
-        if (file.endsWith("/meson.build")) {
-            MesonFileNode *mfn = createMesonFileNode(baseNode, parentRelativeName, absoluteFilename);
-            subdirectories[file.mid(0, file.size() - 11)] = mfn; // Remove meson.build suffix
-        } else {
-            createOtherBuildsystemFileNode(baseNode, absoluteFilename);
-        }
-    }
-}
-
-void MesonProject::mesonIntrospectProjectInfo(const MesonBuildConfiguration &cfg)
-{
-    Utils::SynchronousProcess proc;
-    proc.setTimeoutS(100);
-    auto response = proc.run(cfg.mesonPath(), {"introspect", cfg.buildDirectory().toString(), "--projectinfo"});
-    if (response.exitCode!=0) {
-        ProjectExplorer::TaskHub::addTask(ProjectExplorer::Task::Error,
-                                          QStringLiteral("Can't introspect projectinfo. %1")
-                                          .arg(response.exitMessage(cfg.mesonPath(), proc.timeoutS())),
-                                          ProjectExplorer::Constants::TASK_CATEGORY_BUILDSYSTEM,
-                                          cfg.buildDirectory());
-
-        Core::MessageManager::write(response.allOutput());
-        return;
-    }
-
-    QJsonObject json = QJsonDocument::fromJson(response.allRawOutput()).object();
-    if (json.contains("name")) {
-        setDisplayName(json.value("name").toString());
-    }
-}
-
-void MesonProject::addNestedNodes(ProjectExplorer::FolderNode *root, const QJsonObject &json, int displayNameSkip)
-{
-    QStringList buildsystemFiles;
-    const QJsonArray buildsystemFilesArray = json.value("buildsystem_files").toArray();
-    for(const QJsonValue &value: buildsystemFilesArray) {
-        buildsystemFiles.append(value.toString());
-    }
-    std::sort(buildsystemFiles.begin(), buildsystemFiles.end(), [](const QString &a, const QString &b) {
-        return a.size()<b.size();
-    });
-
-    QMap<QString, ProjectExplorer::FolderNode*> createdNodes;
-    for(const QString &relativeFilename: buildsystemFiles) {
-        // top level meson build is handled seperatly.
-        if (relativeFilename == "meson.build") continue;
-        const Utils::FileName absoluteFilename = filename.parentDir().appendPath(relativeFilename);
-        ProjectExplorer::FolderNode *parentNode = root;
-        QString parentRelativeFilename = relativeFilename.mid(displayNameSkip);
-
-        QString probePath = relativeFilename.section("/", 0, -2);
-        while(probePath.length()) {
-            if(createdNodes.contains(probePath)) {
-                parentRelativeFilename = relativeFilename.mid(probePath.length()+1);
-                parentNode = createdNodes.value(probePath);
-            }
-            probePath = probePath.section("/", 0, -2);
-        }
-        if (relativeFilename.endsWith("/meson.build")) {
-            MesonFileNode *mfn = createMesonFileNode(parentNode, parentRelativeFilename, absoluteFilename);
-            createdNodes[relativeFilename.mid(0, relativeFilename.size() - 12)] = mfn; // Remove meson.build suffix
-        } else {
-            createOtherBuildsystemFileNode(parentNode, absoluteFilename);
-        }
-    }
-}
-
-bool MesonProject::mesonIntrospectProjectInfoFromSource(const MesonBuildConfiguration *cfg, MesonProjectNode *root)
-{
     QString mesonPath;
     if(cfg)
         mesonPath = cfg->mesonPath();
@@ -337,7 +180,7 @@ bool MesonProject::mesonIntrospectProjectInfoFromSource(const MesonBuildConfigur
                                           filename);
 
         Core::MessageManager::write(response.allOutput());
-        return false;
+        return project;
     }
     QJsonObject json = QJsonDocument::fromJson(response.allRawOutput()).object();
 
@@ -346,18 +189,37 @@ bool MesonProject::mesonIntrospectProjectInfoFromSource(const MesonBuildConfigur
         setDisplayName(projectName);
     }
 
-    addNestedNodes(root, json, 0);
+    auto addFolderPrefix = [](const QStringList &list, const QString &prefix) -> QStringList {
+        QDir d(prefix);
+        QStringList result;
+        for (const QString &entry: list) {
+            if(QFileInfo(entry).isAbsolute()) {
+                result.append(entry);
+            } else {
+                result.append(d.filePath(entry));
+            }
+        }
+        return result;
+    };
+
+    project.name = projectName;
+    project.version = json.value("version").toString();
+    project.baseDir = filename.toFileInfo().absolutePath();
+    project.buildsystemFiles = addFolderPrefix(jsonArrayToStringList(json.value("buildsystem_files").toArray()), project.baseDir);
+    project.subprojectsDir = json.value("subproject_dir").toString();
 
     const QJsonArray subprojectsArray = json.value("subprojects").toArray();
-    if(subprojectsArray.count()) {
-        ProjectExplorer::FolderNode *subprojectsNode = createSubProjectsNode(root);
-        for(const QJsonValue &value: subprojectsArray) {
-            const QJsonObject subproject = value.toObject();
-            addNestedNodes(subprojectsNode, subproject, 12);
-        }
+    for(const QJsonValue &value: subprojectsArray) {
+        QJsonObject s = value.toObject();
+        IntroSubProject sub;
+        sub.name = s.value("name").toString();
+        sub.version = s.value("version").toString();
+        sub.baseDir = project.baseDir + "/" + project.subprojectsDir + "/" + sub.name;
+        sub.buildsystemFiles = addFolderPrefix(jsonArrayToStringList(s.value("buildsystem_files").toArray()), project.baseDir);
+        project.subprojects.append(sub);
     }
 
-    return true;
+    return project;
 }
 
 Utils::FileName MesonProject::findDefaultMesonExecutable()
@@ -372,6 +234,26 @@ Utils::FileName MesonProject::findDefaultMesonExecutable()
         }
     }
     return mesonBin;
+}
+
+void MesonProject::regenerateProjectFiles(MesonBuildFileParser *parser)
+{
+    Core::FileChangeBlocker changeGuard(parser->filename);
+    QByteArray out=parser->regenerate();
+    Utils::FileSaver saver(parser->filename, QIODevice::Text);
+    if(!saver.hasError()) {
+        saver.write(out);
+    }
+    saver.finalize(Core::ICore::mainWindow());
+}
+
+QStringList MesonProject::jsonArrayToStringList(const QJsonArray arr)
+{
+    QStringList strings;
+    for (const QJsonValue val: arr) {
+        strings.append(val.toString());
+    }
+    return strings;
 }
 
 const QVector<CompileCommandInfo> MesonProject::parseCompileCommands(const MesonBuildConfiguration &cfg, const QVector<TargetInfo> &targetInfos) const
@@ -479,8 +361,8 @@ QVector<TargetInfo> MesonProject::readMesonInfoTargets(const MesonBuildConfigura
 
     const QMap<QString, TargetType> allowedTargetTypes = {
         {"executable", TargetType::Executable},
-        {"shared library", TargetType::StaticLibrary},
-        {"static library", TargetType::DynamicLibrary},
+        {"shared library", TargetType::DynamicLibrary},
+        {"static library", TargetType::StaticLibrary},
         {"shared module", TargetType::SharedModule},
     };
 
@@ -495,14 +377,6 @@ QVector<TargetInfo> MesonProject::readMesonInfoTargets(const MesonBuildConfigura
         t.targetId = target.value("id").toString();
         t.type = allowedTargetTypes.value(target.value("type").toString());
         t.definedIn = target.value("defined_in").toString();
-
-        auto jsonArrayToStringList = [](const QJsonArray arr) -> QStringList {
-            QStringList strings;
-            for (const QJsonValue val: arr) {
-                strings.append(val.toString());
-            }
-            return strings;
-        };
 
         QJsonArray sourceSets = target.value("target_sources").toArray();
         for(const QJsonValue entry: sourceSets) {
@@ -684,7 +558,7 @@ ProjectExplorer::Project::RestoreResult MesonProject::fromMap(const QVariantMap 
 QStringList getAllHeadersFor(const QString &fname)
 {
     QStringList out;
-    const QStringList *exts;
+    const QStringList *exts = nullptr;
     QString base = "";
     static const QStringList cppExts = {".h", "_p.h", ".hpp", ".hh"};
     static const QStringList cExts = {".h"};
@@ -697,7 +571,7 @@ QStringList getAllHeadersFor(const QString &fname)
         base = fname;
         base.chop(2);
     }
-    if (!base.isEmpty()) {
+    if (exts) {
         for (const QString &ext: *exts) {
             QString maybeHeader = base;
             maybeHeader.append(ext);

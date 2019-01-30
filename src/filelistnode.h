@@ -1,16 +1,15 @@
 #pragma once
 
 #include "mesonbuildfileparser.h"
+#include "mesonproject.h"
 
 #include <projectexplorer/projectnodes.h>
 
 namespace MesonProjectManager {
 
-class MesonProjectPartManager;
-
 class FileListNode : public ProjectExplorer::VirtualFolderNode {
 public:
-    explicit FileListNode(MesonProjectPartManager* projectPartManager, MesonBuildFileParser::ChunkInfo *chunk, const Utils::FileName &folderPath, int priority);
+    explicit FileListNode(std::shared_ptr<MesonBuildFileParser> parser, MesonBuildFileParser::ChunkInfo *chunk, const Utils::FileName &folderPath, int priority, MesonProjectManager::MesonProject *project);
 
     bool addFiles(const QStringList &filePaths, QStringList *notAdded) override;
     bool removeFiles(const QStringList &filePaths, QStringList *notRemoved) override;
@@ -22,8 +21,9 @@ public:
 private:
     QString getRelativeFileName(const QString &filePath);
 
-    MesonProjectPartManager* projectPartManager = nullptr;
+    std::shared_ptr<MesonBuildFileParser> parser;
     MesonBuildFileParser::ChunkInfo *chunk = nullptr;
+    MesonProject *project = nullptr;
 };
 
 } // namespace MesonProjectManager
