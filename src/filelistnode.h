@@ -1,13 +1,14 @@
 #pragma once
 
 #include "mesonbuildfileparser.h"
-#include "mesonproject.h"
 
 #include <projectexplorer/projectnodes.h>
 
 namespace MesonProjectManager {
 
-class FileListNode : public ProjectExplorer::VirtualFolderNode {
+class MesonProject;
+
+class FileListNode : public virtual ProjectExplorer::VirtualFolderNode {
 public:
     explicit FileListNode(std::shared_ptr<MesonBuildFileParser> parser, MesonBuildFileParser::ChunkInfo *chunk, const Utils::FileName &folderPath, int priority, MesonProjectManager::MesonProject *project);
 

@@ -35,29 +35,35 @@ void TreeBuilder::addEditableFileLists(ProjectExplorer::FolderNode *node, MesonP
         auto listNode = std::make_unique<FileListNode>(list.parser, &list.parser->fileList(list.name), Utils::FileName::fromString(list.parser->getProject_base()), Priorities::EditableGroup, project);
         listNode->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_ui.png"));
         listNode->setDisplayName(list.name);
-        const QStringList abs_file_paths = list.parser->fileListAbsolute(list.name);
-        for(const auto &fname: abs_file_paths) {
-            listNode->addNestedNode(std::make_unique<ProjectExplorer::FileNode>(Utils::FileName::fromString(fname), ProjectExplorer::FileType::Source, false),
+        processEditableFileList(listNode.get(), list);
+        node->addNode(move(listNode));
+    }
+}
+
+void TreeBuilder::processEditableFileList(ProjectExplorer::FolderNode *listNode, const EditableList &list)
+{
+    const QStringList abs_file_paths = list.parser->fileListAbsolute(list.name);
+    for(const auto &fname: abs_file_paths) {
+        listNode->addNestedNode(std::make_unique<ProjectExplorer::FileNode>(Utils::FileName::fromString(fname), ProjectExplorer::FileType::Source, false),
+        {}, [](const Utils::FileName &fn) {
+            auto node = std::make_unique<MesonFileSubFolderNode>(fn);
+            node->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_ui.png"));
+            return node;
+        });
+
+        const QStringList headers = getAllHeadersFor(fname);
+        for(const QString &header: headers) {
+            if(abs_file_paths.contains(header))
+                continue;
+            listNode->addNestedNode(std::make_unique<ProjectExplorer::FileNode>(Utils::FileName::fromString(header), ProjectExplorer::FileType::Header, false),
             {}, [](const Utils::FileName &fn) {
                 auto node = std::make_unique<MesonFileSubFolderNode>(fn);
                 node->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_ui.png"));
                 return node;
             });
-
-            const QStringList headers = getAllHeadersFor(fname);
-            for(const QString &header: headers) {
-                if(abs_file_paths.contains(header))
-                    continue;
-                listNode->addNestedNode(std::make_unique<ProjectExplorer::FileNode>(Utils::FileName::fromString(header), ProjectExplorer::FileType::Header, false),
-                {}, [](const Utils::FileName &fn) {
-                    auto node = std::make_unique<MesonFileSubFolderNode>(fn);
-                    node->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_ui.png"));
-                    return node;
-                });
-            }
         }
-        node->addNode(move(listNode));
     }
+
 }
 
 void TreeBuilder::buildProject(ProjectExplorer::FolderNode *parent, IntroSubProject &project, const QString &buildDir)
@@ -157,7 +163,20 @@ void TreeBuilder::addNestedNodes(ProjectExplorer::FolderNode *root, const QVecto
         for (const TargetInfo &target: project.targets) {
             if (target.definedIn != absoluteFilename)
                 continue;
-            MesonTargetNode* mtn = createMesonTargetNode(parentNode, parentRelativeFilename, Utils::FileName::fromString(absoluteFilename), target.editableLists, target, buildDir);
+
+            bool anyUngroupedFiles = false;
+            for(const QString &extraFile: target.extraFiles) {
+                if(extraFile.startsWith(buildDir)) {
+                    anyUngroupedFiles = true;
+                    break;
+                }
+            }
+
+            if(target.editableLists.size()==1 && !anyUngroupedFiles) {
+                parentNode->addNode(std::make_unique<MesonSingleGroupTargetNode>(Utils::FileName::fromString(absoluteFilename).parentDir(), mesonProject, target.editableLists.first(), target, buildDir));
+            } else  {
+                parentNode->addNode(std::make_unique<MesonTargetNode>(mesonProject, Utils::FileName::fromString(absoluteFilename), target.editableLists, target, buildDir));
+            }
         }
     }
 }
@@ -184,14 +203,6 @@ MesonSubDirNode *TreeBuilder::createMesonSubDirNode(ProjectExplorer::FolderNode 
     msn->setDisplayName(displayName);
     MesonSubDirNode *out = msn.get();
     parentNode->addNode(move(msn));
-    return out;
-}
-
-MesonTargetNode *TreeBuilder::createMesonTargetNode(ProjectExplorer::FolderNode *parentNode, QString parentRelativeName, Utils::FileName absoluteFileName, const QVector<EditableList> &editableLists, const TargetInfo &target, const QString &buildDir)
-{
-    auto mtn = std::make_unique<MesonTargetNode>(mesonProject, absoluteFileName, editableLists, target, buildDir);
-    MesonTargetNode *out = mtn.get();
-    parentNode->addNode(move(mtn));
     return out;
 }
 

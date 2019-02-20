@@ -1,6 +1,6 @@
 #pragma once
 
-#include "mesonproject.h"
+#include "filelistnode.h"
 
 #include <projectexplorer/projectnodes.h>
 
@@ -10,12 +10,19 @@ class MesonProject;
 struct EditableList;
 struct TargetInfo;
 
-class MesonTargetNode: public ProjectExplorer::FolderNode
+class MesonTargetNode: public virtual ProjectExplorer::VirtualFolderNode
 {
 public:
     MesonTargetNode(MesonProject *project, const Utils::FileName &filename, const QVector<EditableList> &editableLists, const TargetInfo &target, const QString &buildDir);
-    void addGeneratedAndExtraFileNodes(const TargetInfo &target, const QString &buildDir);
+    void addGeneratedAndUngroupedFilesNodes(const TargetInfo &target, const QString &buildDir);
 
+    bool supportsAction(ProjectExplorer::ProjectAction action, const ProjectExplorer::Node *node) const override;
+};
+
+class MesonSingleGroupTargetNode: public FileListNode, public MesonTargetNode
+{
+public:
+    MesonSingleGroupTargetNode(const Utils::FileName &folderPath, MesonProjectManager::MesonProject *project, const EditableList &editableList, const TargetInfo &target, const QString &buildDir);
     bool supportsAction(ProjectExplorer::ProjectAction action, const ProjectExplorer::Node *node) const override;
 };
 
