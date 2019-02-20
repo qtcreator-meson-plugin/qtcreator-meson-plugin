@@ -22,8 +22,8 @@ bool MesonProjectManagerPlugin::initialize(const QStringList &arguments, QString
     Q_UNUSED(arguments)
     Q_UNUSED(errorString)
 
-    Core::FileIconProvider::registerIconOverlayForFilename(":/projectexplorer/images/projectexplorer.png", "meson.build");
-    Core::FileIconProvider::registerIconOverlayForFilename(":/projectexplorer/images/projectexplorer.png", "meson_options.txt");
+    Core::FileIconProvider::registerIconOverlayForFilename(":/mesonprojectmanager/images/ui_overlay_meson.png", "meson.build");
+    Core::FileIconProvider::registerIconOverlayForFilename(":/mesonprojectmanager/images/ui_overlay_meson.png", "meson_options.txt");
 
     ProjectExplorer::ProjectManager::registerProjectType<MesonProject>(PROJECT_MIMETYPE);
 

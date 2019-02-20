@@ -209,7 +209,7 @@ ProjectExplorer::FolderNode *TreeBuilder::createSubProjectsNode(ProjectExplorer:
 {
     Utils::FileName fnSubprojects = Utils::FileName::fromString(_project.baseDir+"/"+_project.subprojectsDir);
     ProjectExplorer::FolderNode *subprojects = new SubProjectsNode(fnSubprojects, ProjectExplorer::NodeType::Folder, "subprojects");
-    subprojects->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_qt.png"));
+    subprojects->setIcon(Core::FileIconProvider::directoryIcon(":/mesonprojectmanager/images/ui_overlay_meson.png"));
     parentNode->addNode(std::unique_ptr<ProjectExplorer::FolderNode>(subprojects));
     return subprojects;
 }

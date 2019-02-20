@@ -1,5 +1,7 @@
 <RCC>
     <qresource prefix="/mesonprojectmanager">
         <file>images/meson_logo.png</file>
+        <file>images/ui_overlay_meson.png</file>
+        <file>images/ui_overlay_meson@2x.png</file>
     </qresource>
 </RCC>
