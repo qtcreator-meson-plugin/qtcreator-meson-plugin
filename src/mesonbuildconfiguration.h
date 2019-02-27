@@ -13,7 +13,7 @@ public:
     explicit MesonBuildConfiguration(ProjectExplorer::Target *parent, const Core::Id &id);
 
 public:
-    void initialize(const ProjectExplorer::BuildInfo *info) override;
+    void initialize(const ProjectExplorer::BuildInfo &info) override;
 
     ProjectExplorer::NamedWidget *createConfigWidget() override;
     BuildType buildType() const override;
@@ -39,15 +39,15 @@ private:
     MesonBuildConfiguration *config;
 };
 
-class MesonBuildConfigurationFactory : public ProjectExplorer::IBuildConfigurationFactory
+class MesonBuildConfigurationFactory : public ProjectExplorer::BuildConfigurationFactory
 {
 public:
     MesonBuildConfigurationFactory();
 
-    QList<ProjectExplorer::BuildInfo *> availableBuilds(const ProjectExplorer::Target *parent) const override;
-    QList<ProjectExplorer::BuildInfo *> availableSetups(const ProjectExplorer::Kit *k, const QString &projectPath) const override;
+    QList<ProjectExplorer::BuildInfo> availableBuilds(const ProjectExplorer::Target *parent) const override;
+    QList<ProjectExplorer::BuildInfo> availableSetups(const ProjectExplorer::Kit *k, const QString &projectPath) const override;
 
-    ProjectExplorer::BuildInfo *createBuildInfo(const ProjectExplorer::Kit *k, const QString &projectPath, ProjectExplorer::BuildConfiguration::BuildType type) const;
+    ProjectExplorer::BuildInfo createBuildInfo(const ProjectExplorer::Kit *k, const QString &projectPath) const;
 
 private:
     bool correctProject(const ProjectExplorer::Target *parent) const;

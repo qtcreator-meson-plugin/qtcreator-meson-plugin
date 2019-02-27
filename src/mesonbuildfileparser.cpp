@@ -31,7 +31,7 @@ void MesonBuildFileParser::parse()
     while (!file.atEnd()) {
         read_line();
         if (trimmed_line.startsWith("#ide:editable-filelist")) {
-            chunks.append({ChunkType::other, line, "", {}, {}});
+            chunks.append({ChunkType::other, line, QString(), {}, {}});
             if (file.atEnd())
                 break;
             read_line();
@@ -65,9 +65,9 @@ void MesonBuildFileParser::parse()
 
             if (!uninterpreted.isEmpty())
                 uninterpreted_lines.insert("", uninterpreted);
-            chunks.append({ChunkType::file_list, "", section_name, files, uninterpreted_lines});
+            chunks.append({ChunkType::file_list, QString(), section_name, files, uninterpreted_lines});
         } else {
-            chunks.append({ChunkType::other, line, "", {}, {}});
+            chunks.append({ChunkType::other, line, QString(), {}, {}});
         }
     }
 

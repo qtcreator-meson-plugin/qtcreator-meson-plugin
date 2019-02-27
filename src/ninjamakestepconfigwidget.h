@@ -14,9 +14,8 @@ class NinjaMakeStepConfigWidget : public ProjectExplorer::BuildStepConfigWidget
 
 public:
     explicit NinjaMakeStepConfigWidget(NinjaMakeStep *makeStep);
+    void updateDetails();
 
-    QString displayName() const override;
-    QString summaryText() const override;
 private:
     NinjaMakeStep *step;
 };

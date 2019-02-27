@@ -14,6 +14,8 @@ const char NINJA_COMMAND_KEY[] = "MesonProjectManager.NinjaMakeStep.NinjaCommand
 const char MESON_BC_ID[] = "MesonProjectManager.MesonBuildConfiguration";
 const char MESON_BC_MESON_PATH[] = "MesonProjectManager.MesonBuildConfiguration.MesonPath";
 
+const char MESON_BI_MESON_PATH[] = "MesonProjectManager.BuildInfo.MesonPath";
+
 namespace Priorities {
     //const int MesonBuildFile: DefaultProjectFilePriority (500000)
     const int SubDir = 9;

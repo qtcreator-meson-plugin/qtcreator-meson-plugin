@@ -4,6 +4,7 @@
 #include <QTextStream>
 
 #include <memory>
+#include "constants.h"
 
 class MesonProjectImporterData
 {
@@ -67,26 +68,25 @@ ProjectExplorer::Kit *MesonProjectManager::MesonProjectImporter::createKit(void 
     Q_UNREACHABLE();
 }
 
-QList<ProjectExplorer::BuildInfo *> MesonProjectManager::MesonProjectImporter::buildInfoListForKit(const ProjectExplorer::Kit *k, void *directoryData) const
+const QList<ProjectExplorer::BuildInfo> MesonProjectManager::MesonProjectImporter::buildInfoListForKit(const ProjectExplorer::Kit *k, void *directoryData) const
 {
     auto data = static_cast<MesonProjectImporterData *>(directoryData);
-    QList<ProjectExplorer::BuildInfo *> result;
+    QList<ProjectExplorer::BuildInfo> result;
     // TODO
     auto factory = new MesonBuildConfigurationFactory();
     // create info:
 
 
-    std::unique_ptr<MesonBuildInfo> info(new MesonBuildInfo(factory));
-    info->buildType = ProjectExplorer::BuildConfiguration::Unknown;
-    info->displayName = data->directory.fileName(1);
-    info->kitId = k->id();
-    info->buildDirectory = data->directory;
-    info->mesonPath = data->mesonPath;
-    //info->additionalArguments = {};//data->additionalArguments;
-    //info->config = data->config;
-    //info->makefile = data->makefile;
+    ProjectExplorer::BuildInfo info(factory);
+    info.buildType = ProjectExplorer::BuildConfiguration::Unknown;
+    info.displayName = data->directory.fileName(1);
+    info.kitId = k->id();
+    info.buildDirectory = data->directory;
+    QVariantMap extraParams;
+    extraParams.insert(MESON_BI_MESON_PATH, data->mesonPath);
+    info.extraInfo = extraParams;
 
-    result << info.release();
+    result << info;
 
     return result;
 }

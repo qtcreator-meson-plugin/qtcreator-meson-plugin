@@ -6,24 +6,20 @@ namespace MesonProjectManager {
 
 class NinjaMakeStep : public ProjectExplorer::AbstractProcessStep
 {
-    Q_OBJECT
-
     friend class NinjaMakeStepConfigWidget;
     friend class NinjaMakeStepFactory;
 
 public:
-    //explicit NinjaMakeStep(ProjectExplorer::BuildStepList *parent);
     NinjaMakeStep(ProjectExplorer::BuildStepList *bsl, const QString target);
 
-    bool init(QList<const BuildStep *> &earlierSteps) override;
-    void run(QFutureInterface<bool> &fi) override;
+    bool init() override;
 
     ProjectExplorer::BuildStepConfigWidget *createConfigWidget() override;
-    bool immutable() const override;
+
     bool buildsTarget(const QString &target) const;
     void setBuildTarget(const QString &target, bool on);
     QString allArguments() const;
-    QString ninjaCommand(const Utils::Environment &environment) const;
+    QString ninjaCommand() const;
 
     void setClean(bool clean);
     bool isClean() const;
@@ -35,7 +31,7 @@ public:
 protected:
     bool fromMap(const QVariantMap &map) override;
 
-    void stdOutput(const QString &line);
+    void stdOutput(const QString &line) override;
 
 private:
     bool setupPP(ProjectExplorer::ProcessParameters &pp);
@@ -51,14 +47,12 @@ private:
 
 class NinjaMakeAllStepFactory : public ProjectExplorer::BuildStepFactory
 {
-    Q_OBJECT
 public:
     NinjaMakeAllStepFactory();
 };
 
 class NinjaMakeCleanStepFactory: public ProjectExplorer::BuildStepFactory
 {
-    Q_OBJECT
 public:
     NinjaMakeCleanStepFactory();
 };

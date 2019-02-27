@@ -12,6 +12,7 @@
 #include <projectexplorer/projectexplorerconstants.h>
 #include <projectexplorer/target.h>
 #include <projectexplorer/toolchain.h>
+#include <utils/qtcprocess.h>
 
 namespace MesonProjectManager {
 
@@ -53,13 +54,13 @@ bool NinjaMakeStep::setupPP(ProjectExplorer::ProcessParameters &pp)
     Utils::Environment env = bc->environment();
     Utils::Environment::setupEnglishOutput(&env);
     pp.setEnvironment(env);
-    pp.setCommand(ninjaCommand(bc->environment()));
+    pp.setCommand(ninjaCommand());
     pp.setArguments(allArguments());
     pp.resolveAll();
     return true;
 }
 
-bool NinjaMakeStep::init(QList<const ProjectExplorer::BuildStep *> &earlierSteps)
+bool NinjaMakeStep::init()
 {
     ProjectExplorer::ProcessParameters *pp = processParameters();
     if(!setupPP(*pp))
@@ -73,7 +74,7 @@ bool NinjaMakeStep::init(QList<const ProjectExplorer::BuildStep *> &earlierSteps
         appendOutputParser(parser);
     outputParser()->setWorkingDirectory(pp->effectiveWorkingDirectory());
 
-    return AbstractProcessStep::init(earlierSteps);
+    return AbstractProcessStep::init();
 }
 
 QVariantMap NinjaMakeStep::toMap() const
@@ -111,8 +112,8 @@ void NinjaMakeStep::stdOutput(const QString &line)
         if (ok) {
             int all = m_ninjaProgress.cap(2).toInt(&ok);
             if (ok && all != 0) {
-                futureInterface()->setProgressRange(0, all);
-                futureInterface()->setProgressValue(done);
+                const int percent = static_cast<int>(100.0 * done/all);
+                emit progress(percent, QString());
             }
         }
         return;
@@ -130,7 +131,7 @@ QString NinjaMakeStep::allArguments() const
     return args;
 }
 
-QString NinjaMakeStep::ninjaCommand(const Utils::Environment &environment) const
+QString NinjaMakeStep::ninjaCommand() const
 {
     QString command = m_ninjaCommand;
     if (command.isEmpty()) {
@@ -139,19 +140,9 @@ QString NinjaMakeStep::ninjaCommand(const Utils::Environment &environment) const
     return command;
 }
 
-void NinjaMakeStep::run(QFutureInterface<bool> &fi)
-{
-    AbstractProcessStep::run(fi);
-}
-
 ProjectExplorer::BuildStepConfigWidget *NinjaMakeStep::createConfigWidget()
 {
     return new NinjaMakeStepConfigWidget(this);
-}
-
-bool NinjaMakeStep::immutable() const
-{
-    return false;
 }
 
 bool NinjaMakeStep::buildsTarget(const QString &target) const

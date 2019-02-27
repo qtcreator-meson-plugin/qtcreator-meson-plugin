@@ -2,7 +2,6 @@
 
 #include "constants.h"
 #include "ninjamakestep.h"
-#include "mesonbuildinfo.h"
 #include "mesonproject.h"
 
 #include <projectexplorer/buildconfiguration.h>
@@ -20,6 +19,7 @@
 #include <QLineEdit>
 #include <QLabel>
 #include <QFormLayout>
+#include <QVariantMap>
 
 namespace MesonProjectManager {
 
@@ -28,7 +28,7 @@ MesonBuildConfiguration::MesonBuildConfiguration(ProjectExplorer::Target *parent
 {
 }
 
-void MesonBuildConfiguration::initialize(const ProjectExplorer::BuildInfo *info)
+void MesonBuildConfiguration::initialize(const ProjectExplorer::BuildInfo &info)
 {
     BuildConfiguration::initialize(info);
 
@@ -38,8 +38,8 @@ void MesonBuildConfiguration::initialize(const ProjectExplorer::BuildInfo *info)
     ProjectExplorer::BuildStepList *cleanSteps = stepList(ProjectExplorer::Constants::BUILDSTEPS_CLEAN);
     cleanSteps->appendStep(new NinjaMakeStep(cleanSteps, "clean"));
 
-    const MesonBuildInfo *mInfo = dynamic_cast<const MesonBuildInfo *>(info);
-    setMesonPath(mInfo->mesonPath);
+    QVariantMap extraParams = info.extraInfo.toMap();
+    setMesonPath(extraParams.value(MESON_BI_MESON_PATH).toString());
 
     updateCacheAndEmitEnvironmentChanged();
 }
@@ -83,27 +83,26 @@ void MesonBuildConfiguration::setMesonPath(const QString &mesonPath)
 }
 
 MesonBuildConfigurationFactory::MesonBuildConfigurationFactory():
-    IBuildConfigurationFactory()
+    BuildConfigurationFactory()
 {
     registerBuildConfiguration<MesonBuildConfiguration>(MESON_BC_ID);
     setSupportedProjectType(MESONPROJECT_ID);
     setSupportedProjectMimeTypeName(PROJECT_MIMETYPE);
 }
 
-ProjectExplorer::BuildInfo *MesonBuildConfigurationFactory::createBuildInfo(const ProjectExplorer::Kit *k,
-                                                                            const QString &projectPath,
-                                                                            ProjectExplorer::BuildConfiguration::BuildType type) const
+ProjectExplorer::BuildInfo MesonBuildConfigurationFactory::createBuildInfo(const ProjectExplorer::Kit *k,
+                                                                            const QString &projectPath) const
 {
-    MesonBuildInfo *info = new MesonBuildInfo(this);
-    info->displayName = tr("Debug");
+    ProjectExplorer::BuildInfo info(this);
+    info.displayName = tr("Debug");
     QString suffix = tr("Debug", "Shadow build directory suffix");
 
-    info->typeName = info->displayName;
-    info->buildDirectory = Utils::FileName::fromString(QFileInfo(projectPath).absolutePath()).appendPath("_build");
-    info->kitId = k->id();
-    info->mesonPath = MesonProject::findDefaultMesonExecutable().toString();
-
-    //info->buildType = type;
+    info.typeName = info.displayName;
+    info.buildDirectory = Utils::FileName::fromString(QFileInfo(projectPath).absolutePath()).appendPath("_build");
+    info.kitId = k->id();
+    QVariantMap extraParams;
+    extraParams.insert(MESON_BI_MESON_PATH, MesonProject::findDefaultMesonExecutable().toString());
+    info.extraInfo = extraParams;
     return info;
 }
 
@@ -112,30 +111,30 @@ bool MesonBuildConfigurationFactory::correctProject(const ProjectExplorer::Targe
     return qobject_cast<MesonProject*>(parent->project());
 }
 
-QList<ProjectExplorer::BuildInfo *> MesonBuildConfigurationFactory::availableBuilds(const ProjectExplorer::Target *parent) const
+QList<ProjectExplorer::BuildInfo> MesonBuildConfigurationFactory::availableBuilds(const ProjectExplorer::Target *parent) const
 {
-    QList<ProjectExplorer::BuildInfo *> result;
+    QList<ProjectExplorer::BuildInfo> result;
 
     // These are the options in the add menu of the build settings page.
 
     const QString projectFilePath = parent->project()->projectFilePath().toString();
 
-    ProjectExplorer::BuildInfo *info = createBuildInfo(parent->kit(), projectFilePath, ProjectExplorer::BuildConfiguration::Debug);
-    info->displayName.clear(); // ask for a name
-    info->buildDirectory.clear(); // This depends on the displayName
+    ProjectExplorer::BuildInfo info = createBuildInfo(parent->kit(), projectFilePath);
+    info.displayName.clear(); // ask for a name
+    info.buildDirectory.clear(); // This depends on the displayName
     result << info;
     return result;
 }
 
-QList<ProjectExplorer::BuildInfo *> MesonBuildConfigurationFactory::availableSetups(const ProjectExplorer::Kit *k, const QString &projectPath) const
+QList<ProjectExplorer::BuildInfo> MesonBuildConfigurationFactory::availableSetups(const ProjectExplorer::Kit *k, const QString &projectPath) const
 {
     // Used in initial setup. Returning nothing breaks easy import in setup dialog.
 
     //qDebug()<<__PRETTY_FUNCTION__<<" TODO";
-    QList<ProjectExplorer::BuildInfo *> result;
-    ProjectExplorer::BuildInfo *info = createBuildInfo(k, projectPath, ProjectExplorer::BuildConfiguration::BuildType::Unknown);
+    QList<ProjectExplorer::BuildInfo> result;
+    ProjectExplorer::BuildInfo info = createBuildInfo(k, projectPath);
     //: The name of the build configuration created by default for a generic project.
-    info->displayName = tr("Default");
+    info.displayName = tr("Default");
     result.append(info);
     return result;
 }

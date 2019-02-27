@@ -8,7 +8,6 @@ SOURCES += \
     src/ninjamakestep.cpp \
     src/ninjamakestepconfigwidget.cpp \
     src/mesonprojectmanagerplugin.cpp \
-    src/mesonbuildinfo.cpp \
     src/mesonbuildconfiguration.cpp \
     src/mesonprojectimporter.cpp \
     src/filelistnode.cpp \
@@ -27,7 +26,6 @@ HEADERS += \
     src/ninjamakestepconfigwidget.h \
     src/constants.h \
     src/mesonprojectmanagerplugin.h \
-    src/mesonbuildinfo.h \
     src/mesonbuildconfiguration.h \
     src/mesonprojectimporter.h \
     src/filelistnode.h \

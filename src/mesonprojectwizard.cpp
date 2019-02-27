@@ -27,12 +27,12 @@
 
 #include "constants.h"
 #include "mesonbuildconfiguration.h"
-#include "mesonbuildinfo.h"
 #include "mesonproject.h"
 
 #include <coreplugin/icore.h>
 
 #include <projectexplorer/customwizard/customwizard.h>
+#include <projectexplorer/buildinfo.h>
 #include <projectexplorer/kitmanager.h>
 #include <projectexplorer/projectexplorerconstants.h>
 #include <projectexplorer/target.h>
@@ -195,20 +195,22 @@ bool MesonProjectWizard::postGenerateFiles(const QWizard *w, const Core::Generat
     {
         MesonProject proj(Utils::FileName::fromString(l.first().path()));
         ProjectExplorer::Kit *kit = ProjectExplorer::KitManager::instance()->defaultKit();
-        ProjectExplorer::Target *target = proj.createTarget(kit);
+        std::unique_ptr<ProjectExplorer::Target> target = proj.createTarget(kit);
         MesonBuildConfigurationFactory factory;
 
-        MesonBuildInfo buildInfo(&factory);
+        ProjectExplorer::BuildInfo buildInfo(&factory);
         buildInfo.buildDirectory = Utils::FileName::fromString(dir.absoluteFilePath("_build"));
         buildInfo.displayName = "Default";
         buildInfo.kitId = kit->id();
         buildInfo.typeName = buildInfo.displayName;
-        buildInfo.mesonPath = mesonBin.toString();
+        QVariantMap extraParams;
+        extraParams.insert(MESON_BI_MESON_PATH, mesonBin.toString());
+        buildInfo.extraInfo = extraParams;
 
-        ProjectExplorer::BuildConfiguration *cfg = factory.create(target, &buildInfo);
+        ProjectExplorer::BuildConfiguration *cfg = factory.create(target.get(), buildInfo);
         target->addBuildConfiguration(cfg);
 
-        proj.addTarget(target);
+        proj.addTarget(move(target));
         proj.saveSettings();
     }
 

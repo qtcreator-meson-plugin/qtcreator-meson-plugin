@@ -16,6 +16,7 @@
 #include <cpptools/projectinfo.h>
 #include <cpptools/cpprawprojectpart.h>
 #include <cpptools/cppprojectupdater.h>
+#include <cpptools/cppkitinfo.h>
 
 #include <projectexplorer/projectimporter.h>
 #include <projectexplorer/buildinfo.h>
@@ -63,7 +64,7 @@ bool CompileCommandInfo::operator==(const CompileCommandInfo &o) const
 }
 
 MesonProject::MesonProject(const Utils::FileName &filename):
-    Project(PROJECT_MIMETYPE, filename), filename(filename), cppCodeModelUpdater(new CppTools::CppProjectUpdater(this))
+    Project(PROJECT_MIMETYPE, filename), filename(filename), cppCodeModelUpdater(new CppTools::CppProjectUpdater())
 {
     setId(MESONPROJECT_ID);
     setProjectLanguages(Core::Context(ProjectExplorer::Constants::CXX_LANGUAGE_ID));
@@ -466,7 +467,11 @@ void MesonProject::refreshCppCodeModel(const QVector<CompileCommandInfo> &fileCo
         i++;
     }
 
-    const CppTools::ProjectUpdateInfo projectInfoUpdate(this, cToolChain, cxxToolChain, k, parts);
+    CppTools::KitInfo kitInfo(this);
+    kitInfo.cToolChain = cToolChain;
+    kitInfo.cxxToolChain = cxxToolChain;
+
+    const CppTools::ProjectUpdateInfo projectInfoUpdate(this, kitInfo, parts);
     cppCodeModelUpdater->update(projectInfoUpdate);
 }
 

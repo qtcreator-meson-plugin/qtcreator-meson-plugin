@@ -1,9 +1,13 @@
 #include "ninjamakestepconfigwidget.h"
 
+#include <projectexplorer/buildconfiguration.h>
+#include <projectexplorer/project.h>
+#include <projectexplorer/projectexplorer.h>
+
 namespace MesonProjectManager
 {
 
-NinjaMakeStepConfigWidget::NinjaMakeStepConfigWidget(NinjaMakeStep *makeStep): step(makeStep)
+NinjaMakeStepConfigWidget::NinjaMakeStepConfigWidget(NinjaMakeStep *makeStep): ProjectExplorer::BuildStepConfigWidget(makeStep), step(makeStep)
 {
     QFormLayout *layout = new QFormLayout();
     setLayout(layout);
@@ -13,6 +17,7 @@ NinjaMakeStepConfigWidget::NinjaMakeStepConfigWidget(NinjaMakeStep *makeStep): s
     layout->addRow(new QLabel(tr("Override Command")), lineedit_cmd);
     connect(lineedit_cmd, &QLineEdit::textChanged, [this, lineedit_cmd] {
         step->m_ninjaCommand = lineedit_cmd->text();
+        updateDetails();
         emit updateSummary();
     });
 
@@ -21,6 +26,7 @@ NinjaMakeStepConfigWidget::NinjaMakeStepConfigWidget(NinjaMakeStep *makeStep): s
     layout->addRow(new QLabel(tr("Additional Arguments")), lineedit_args);
     connect(lineedit_args, &QLineEdit::textChanged, [this, lineedit_args] {
         step->m_ninjaArguments = lineedit_args->text();
+        updateDetails();
         emit updateSummary();
     });
 
@@ -29,18 +35,29 @@ NinjaMakeStepConfigWidget::NinjaMakeStepConfigWidget(NinjaMakeStep *makeStep): s
     layout->addRow(new QLabel(tr("Targets")), lineedit_targets);
     connect(lineedit_targets, &QLineEdit::textChanged, [this, lineedit_targets] {
         step->m_buildTargets = lineedit_targets->text().split(" ", QString::SkipEmptyParts);
+        updateDetails();
         emit updateSummary();
     });
+
+    setDisplayName("ninja");
+    updateDetails();
+    connect(ProjectExplorer::ProjectExplorerPlugin::instance(), &ProjectExplorer::ProjectExplorerPlugin::settingsChanged,
+            this, &NinjaMakeStepConfigWidget::updateDetails);
+    makeStep->project()->subscribeSignal(&ProjectExplorer::BuildConfiguration::environmentChanged, this, [this]() {
+        if (static_cast<ProjectExplorer::BuildConfiguration *>(sender())->isActive())
+            updateDetails();
+    });
+    connect(makeStep->project(), &ProjectExplorer::Project::activeProjectConfigurationChanged,
+            this, [this](ProjectExplorer::ProjectConfiguration *pc) {
+        if (pc && pc->isActive())
+            updateDetails();
+    });
+
 }
 
-QString NinjaMakeStepConfigWidget::displayName() const
+void NinjaMakeStepConfigWidget::updateDetails()
 {
-    return "ninja";
-}
-
-QString NinjaMakeStepConfigWidget::summaryText() const
-{
-    return step->getSummary();
+    setSummaryText(step->getSummary());
 }
 
 }
