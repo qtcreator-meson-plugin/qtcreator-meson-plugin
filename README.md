@@ -1,5 +1,5 @@
 # About
-This is some basic Meson buildsystem integration for Qt Creator.
+This is some basic Meson build system integration for Qt Creator.
 
 Currently implemented features:
 - Create new projects
@@ -8,18 +8,18 @@ Currently implemented features:
   - Other files
   - Subdirectories
   - Subprojects
-  - Automatially shows coresponding header files (.h, .hpp, .hh, _p variants)
-- Add/Remvoe/Rename files in explicitly marked file lists
-- Basic build integration (ninja backend only):
-- Extract C++ code completion information from compile_commands.json
-
-Not yet implemented:
+  - Automatically shows corresponding header files (.h, .hpp, .hh, _p variants)
+- Add/Remove/Rename files in explicitly marked file lists
+- Basic build integration (ninja backend only)
+- Extract C++ code completion information from build directory
 - Group files by target
 - Edit build directory configuration
+
+Not yet implemented:
 - Automatically detect (or create) build directory for existing projects
 - Kit support
 - meson.build syntax highlighting/code completion
-- Asychronous meson introspection / project parsing
+- Asynchronous meson introspection / project parsing
 
 # How to create editable file groups
 To enable editing a file list directly from the project explorer it needs to be marked with a marker comment.
@@ -35,7 +35,7 @@ sources = [
 
 # Building from source
 
-Please note that the build was only tested with Qt Creator 4.7.0 and other versions most likely won't work as the Qt Creator APIs tend to change even between minor version.
+Please note that the build was only tested with Qt Creator 4.9-beta2 and other versions most likely won't work as the Qt Creator APIs tend to change even between minor version.
 
 To build the plugin you need the qtcreator sources and libraries. So the safest way is to also build qtcreator from source.
 
@@ -47,17 +47,20 @@ Rough steps:
 # useful on debian's stock qt
 export QT_SELECT=5
 
-wget http://download.qt.io/official_releases/qtcreator/4.7/4.7.0/qt-creator-opensource-src-4.7.0.tar.xz
-tar -xf qt-creator-opensource-src-4.7.0.tar.xz
-mkdir qt-creator-opensource-src-4.7.0-build
-cd qt-creator-opensource-src-4.7.0-build
+wget https://download.qt.io/development_releases/qtcreator/4.9/4.9.0-beta2/qt-creator-opensource-src-4.9.0-beta2.tar.xz
+tar -xf qt-creator-opensource-src-4.9.0-beta2.tar.xz
+mkdir qt-creator-opensource-src-4.9.0-beta2-build
+cd qt-creator-opensource-src-4.9.0-beta2-build
 
-qmake -r ../qt-creator-opensource-src-4.7.0
+qmake -r ../qt-creator-opensource-src-4.9.0-beta2
 make -j 6
-IDE_SOURCE_TREE=$(realpath ../qt-creator-opensource-src-4.7.0)
+IDE_SOURCE_TREE=$(realpath ../qt-creator-opensource-src-4.9.0-beta2)
 IDE_BUILD_TREE=$(realpath .)
 
 cd /path/to/qtcreator-meson-plugin
 qmake mesonprojectmanager.pro IDE_SOURCE_TREE="$IDE_SOURCE_TREE" IDE_BUILD_TREE="$IDE_BUILD_TREE"
 make
 ```
+
+# Snapshots
+You can find automatically built snapshots on [Azure Pipelines](https://dev.azure.com/qtcreator-meson-plugin/qtcreator-meson-plugin/_build).
