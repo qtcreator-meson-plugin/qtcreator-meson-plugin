@@ -14,8 +14,8 @@ steps:
     set -x
 
     QTC_VERSION=4.9
-    QTC_FULL=4.9.0-beta2
-    QTC_INTERNAL=4.8.83
+    QTC_FULL=4.9.0-rc1
+    QTC_INTERNAL=4.8.84
 
     sudo apt-get update
     sudo apt-get install -y --no-install-recommends p7zip libgl1-mesa-dev libsm6 libice6 libxext6 libxrender1 libfontconfig1 libdbus-1-3
