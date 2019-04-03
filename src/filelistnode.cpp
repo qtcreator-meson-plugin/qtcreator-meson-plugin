@@ -11,9 +11,16 @@ FileListNode::FileListNode(std::shared_ptr<MesonBuildFileParser> parser, MesonBu
 
 bool FileListNode::addFiles(const QStringList &filePaths, QStringList *notAdded)
 {
+    QStringList implicitFiles;
+    for (const QString &str: chunk->file_list) {
+        implicitFiles += getAllHeadersFor(parser->getProject_base() + "/" + str);
+    }
+    for (const QString &str: filePaths) {
+        implicitFiles += getAllHeadersFor(str);
+    }
     for(const auto &fp: filePaths) {
         QString relative_fn = getRelativeFileName(fp);
-        if(!chunk->file_list.contains(relative_fn))
+        if(!chunk->file_list.contains(relative_fn) && !implicitFiles.contains(fp))
             chunk->file_list.append(relative_fn);
     }
 
