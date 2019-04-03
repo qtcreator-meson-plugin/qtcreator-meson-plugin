@@ -139,7 +139,12 @@ void MesonProject::refresh()
             p->targets.append(target);
         }
 
-        buildDir = cfg->buildDirectory().toString();
+        Utils::FileName buildDirFileName = cfg->buildDirectory();
+        buildDir = buildDirFileName.toString();
+
+        projectDocuments.emplace_back(std::make_unique<ProjectExplorer::ProjectDocument>(MesonProjectManager::PROJECT_MIMETYPE, buildDirFileName.appendPath("meson-info/intro-targets.json"), [this] {
+            refresh();
+        }));
     }
 
     TreeBuilder builder(this, introProject);
