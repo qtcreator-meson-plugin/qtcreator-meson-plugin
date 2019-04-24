@@ -35,7 +35,7 @@ sources = [
 
 # Building from source
 
-Please note that the build was only tested with Qt Creator 4.9-beta2 and other versions most likely won't work as the Qt Creator APIs tend to change even between minor version.
+Please note that the build was only tested with Qt Creator 4.9.0 and other versions most likely won't work as the Qt Creator APIs tend to change even between minor version.
 
 To build the plugin you need the qtcreator sources and libraries. So the safest way is to also build qtcreator from source.
 
@@ -47,14 +47,14 @@ Rough steps:
 # useful on debian's stock qt
 export QT_SELECT=5
 
-wget https://download.qt.io/development_releases/qtcreator/4.9/4.9.0-beta2/qt-creator-opensource-src-4.9.0-beta2.tar.xz
-tar -xf qt-creator-opensource-src-4.9.0-beta2.tar.xz
-mkdir qt-creator-opensource-src-4.9.0-beta2-build
-cd qt-creator-opensource-src-4.9.0-beta2-build
+wget https://download.qt.io/official_releases/qtcreator/4.9/4.9.0/qt-creator-opensource-src-4.9.0.tar.xz
+tar -xf qt-creator-opensource-src-4.9.0.tar.xz
+mkdir qt-creator-opensource-src-4.9.0-build
+cd qt-creator-opensource-src-4.9.0-build
 
-qmake -r ../qt-creator-opensource-src-4.9.0-beta2
+qmake -r ../qt-creator-opensource-src-4.9.0
 make -j 6
-IDE_SOURCE_TREE=$(realpath ../qt-creator-opensource-src-4.9.0-beta2)
+IDE_SOURCE_TREE=$(realpath ../qt-creator-opensource-src-4.9.0)
 IDE_BUILD_TREE=$(realpath .)
 
 cd /path/to/qtcreator-meson-plugin
