@@ -5,8 +5,9 @@
 namespace MesonProjectManager {
 
 FileListNode::FileListNode(std::shared_ptr<MesonBuildFileParser> parser, MesonBuildFileParser::ChunkInfo *chunk, const Utils::FileName &folderPath, int priority, MesonProject *project) :
-    ProjectExplorer::VirtualFolderNode(folderPath, priority), parser(parser), chunk(chunk), project(project)
+    ProjectExplorer::VirtualFolderNode(folderPath), parser(parser), chunk(chunk), project(project)
 {
+    setPriority(priority);
 }
 
 bool FileListNode::addFiles(const QStringList &filePaths, QStringList *notAdded)

@@ -26,11 +26,11 @@ QStringList MesonProjectManager::MesonProjectImporter::importCandidates()
 QList<void *> MesonProjectManager::MesonProjectImporter::examineDirectory(const Utils::FileName &importPath) const
 {
     QList<void *> result;
-    auto ninjaFile = Utils::FileName(importPath).appendPath("build.ninja");
+    auto ninjaFile = Utils::FileName(importPath).pathAppended("build.ninja");
     if (!ninjaFile.exists())
         return result;
 
-    if (!Utils::FileName(importPath).appendPath("meson-private").exists())
+    if (!Utils::FileName(importPath).pathAppended("meson-private").exists())
         return result;
 
     auto data = std::make_unique<MesonProjectImporterData>();

@@ -44,8 +44,7 @@ public:
 class SubProjectsNode : public ProjectExplorer::FolderNode
 {
 public:
-    explicit SubProjectsNode(const Utils::FileName &folderPath, ProjectExplorer::NodeType nodeType = ProjectExplorer::NodeType::Folder,
-                        const QString &displayName = QString(), const QByteArray &id = {});
+    explicit SubProjectsNode(const Utils::FileName &folderPath, const QString &displayName = QString());
 };
 
 

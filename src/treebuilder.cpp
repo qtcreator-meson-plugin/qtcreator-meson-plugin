@@ -20,7 +20,8 @@ void TreeBuilder::build(MesonRootProjectNode *root, const QString &buildDir)
     if(!_project.subprojects.isEmpty()) {
         ProjectExplorer::FolderNode *subprojectsNode = createSubProjectsNode(root);
         for(IntroSubProject &sub: _project.subprojects) {
-            auto subprojectNode = std::make_unique<ProjectExplorer::VirtualFolderNode>(Utils::FileName::fromString(sub.baseDir), 0);
+            auto subprojectNode = std::make_unique<ProjectExplorer::VirtualFolderNode>(Utils::FileName::fromString(sub.baseDir));
+            subprojectNode->setPriority(0);
             subprojectNode->setDisplayName(sub.name);
             buildProject(subprojectNode.get(), sub, buildDir);
             subprojectsNode->addNode(move(subprojectNode));
@@ -44,7 +45,7 @@ void TreeBuilder::processEditableFileList(ProjectExplorer::FolderNode *listNode,
 {
     const QStringList abs_file_paths = list.parser->fileListAbsolute(list.name);
     for(const auto &fname: abs_file_paths) {
-        listNode->addNestedNode(std::make_unique<ProjectExplorer::FileNode>(Utils::FileName::fromString(fname), ProjectExplorer::FileType::Source, false),
+        listNode->addNestedNode(std::make_unique<ProjectExplorer::FileNode>(Utils::FileName::fromString(fname), ProjectExplorer::FileType::Source),
         {}, [](const Utils::FileName &fn) {
             auto node = std::make_unique<MesonFileSubFolderNode>(fn);
             node->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_ui.png"));
@@ -55,7 +56,7 @@ void TreeBuilder::processEditableFileList(ProjectExplorer::FolderNode *listNode,
         for(const QString &header: headers) {
             if(abs_file_paths.contains(header))
                 continue;
-            listNode->addNestedNode(std::make_unique<ProjectExplorer::FileNode>(Utils::FileName::fromString(header), ProjectExplorer::FileType::Header, false),
+            listNode->addNestedNode(std::make_unique<ProjectExplorer::FileNode>(Utils::FileName::fromString(header), ProjectExplorer::FileType::Header),
             {}, [](const Utils::FileName &fn) {
                 auto node = std::make_unique<MesonFileSubFolderNode>(fn);
                 node->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_ui.png"));
@@ -192,7 +193,7 @@ void TreeBuilder::setupMesonFileNode(ProjectExplorer::FolderNode *node, Utils::F
         mesonProject->refresh();
     });
 
-    node->addNode(std::make_unique<ProjectExplorer::FileNode>(absoluteFileName, ProjectExplorer::FileType::Project, false));
+    node->addNode(std::make_unique<ProjectExplorer::FileNode>(absoluteFileName, ProjectExplorer::FileType::Project));
 
 }
 
@@ -208,7 +209,7 @@ MesonSubDirNode *TreeBuilder::createMesonSubDirNode(ProjectExplorer::FolderNode 
 
 void TreeBuilder::createOtherBuildsystemFileNode(ProjectExplorer::FolderNode *parentNode, Utils::FileName absoluteFilename)
 {
-    parentNode->addNestedNode(std::make_unique<ProjectExplorer::FileNode>(absoluteFilename, ProjectExplorer::FileType::Project, false),
+    parentNode->addNestedNode(std::make_unique<ProjectExplorer::FileNode>(absoluteFilename, ProjectExplorer::FileType::Project),
     {}, [](const Utils::FileName &fn) {
         auto node = std::make_unique<ProjectExplorer::FolderNode>(fn);
         //node->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_ui.png"));
@@ -219,7 +220,7 @@ void TreeBuilder::createOtherBuildsystemFileNode(ProjectExplorer::FolderNode *pa
 ProjectExplorer::FolderNode *TreeBuilder::createSubProjectsNode(ProjectExplorer::FolderNode *parentNode)
 {
     Utils::FileName fnSubprojects = Utils::FileName::fromString(_project.baseDir+"/"+_project.subprojectsDir);
-    ProjectExplorer::FolderNode *subprojects = new SubProjectsNode(fnSubprojects, ProjectExplorer::NodeType::Folder, "subprojects");
+    ProjectExplorer::FolderNode *subprojects = new SubProjectsNode(fnSubprojects, "subprojects");
     subprojects->setIcon(Core::FileIconProvider::directoryIcon(":/mesonprojectmanager/images/ui_overlay_meson.png"));
     parentNode->addNode(std::unique_ptr<ProjectExplorer::FolderNode>(subprojects));
     return subprojects;

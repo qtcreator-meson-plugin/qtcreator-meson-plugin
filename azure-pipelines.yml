@@ -13,9 +13,9 @@ steps:
 - script: |
     set -x
 
-    QTC_VERSION=4.9
-    QTC_FULL=4.9.0
-    QTC_INTERNAL=4.9.0
+    QTC_VERSION=4.10
+    QTC_FULL=4.10.0
+    QTC_INTERNAL=4.10.0
 
     sudo apt-get update
     sudo apt-get install -y --no-install-recommends p7zip libgl1-mesa-dev libsm6 libice6 libxext6 libxrender1 libfontconfig1 libdbus-1-3

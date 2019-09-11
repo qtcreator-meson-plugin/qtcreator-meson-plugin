@@ -142,7 +142,7 @@ void MesonProject::refresh()
         Utils::FileName buildDirFileName = cfg->buildDirectory();
         buildDir = buildDirFileName.toString();
 
-        projectDocuments.emplace_back(std::make_unique<ProjectExplorer::ProjectDocument>(MesonProjectManager::PROJECT_MIMETYPE, buildDirFileName.appendPath("meson-info/intro-targets.json"), [this] {
+        projectDocuments.emplace_back(std::make_unique<ProjectExplorer::ProjectDocument>(MesonProjectManager::PROJECT_MIMETYPE, buildDirFileName.pathAppended("meson-info/intro-targets.json"), [this] {
             refresh();
         }));
     }
@@ -355,7 +355,7 @@ QVector<CompileCommandInfo> MesonProject::rewritePaths(const PathResolver::Direc
 
 QVector<TargetInfo> MesonProject::readMesonInfoTargets(const MesonBuildConfiguration &cfg)
 {
-    Utils::FileName mesonInfoTargetsFileName = cfg.buildDirectory().appendPath("meson-info/intro-targets.json");
+    Utils::FileName mesonInfoTargetsFileName = cfg.buildDirectory().pathAppended("meson-info/intro-targets.json");
     if (!mesonInfoTargetsFileName.exists()) {
         return {};
     }
@@ -443,9 +443,9 @@ void MesonProject::refreshCppCodeModel(const QVector<CompileCommandInfo> &fileCo
     //QTC_ASSERT(k, return);
 
     ProjectExplorer::ToolChain *cToolChain
-            = ProjectExplorer::ToolChainKitInformation::toolChain(k, ProjectExplorer::Constants::C_LANGUAGE_ID);
+            = ProjectExplorer::ToolChainKitAspect::toolChain(k, ProjectExplorer::Constants::C_LANGUAGE_ID);
     ProjectExplorer::ToolChain *cxxToolChain
-            = ProjectExplorer::ToolChainKitInformation::toolChain(k, ProjectExplorer::Constants::CXX_LANGUAGE_ID);
+            = ProjectExplorer::ToolChainKitAspect::toolChain(k, ProjectExplorer::Constants::CXX_LANGUAGE_ID);
 
     cppCodeModelUpdater->cancel();
 
@@ -495,7 +495,7 @@ void MesonProject::editOptions()
     }
     MesonBuildConfiguration &cfg = *cfg_ptr;
     const Utils::FileName buildDir = cfg.buildDirectory();
-    const bool buildConfigured = Utils::FileName(buildDir).appendPath("meson-private").appendPath("coredata.dat").exists();
+    const bool buildConfigured = Utils::FileName(buildDir).pathAppended("meson-private").pathAppended("coredata.dat").exists();
     const QString pathArg = buildConfigured ? buildDir.toString() : filename.toString();
     auto response = proc.run(cfg.mesonPath(), {"introspect", "--buildoptions", pathArg});
     if (response.exitCode!=0) {

@@ -40,7 +40,7 @@ bool NinjaMakeStep::setupPP(ProjectExplorer::ProcessParameters &pp)
     if (!bc)
         emit addTask(ProjectExplorer::Task::buildConfigurationMissingTask());
 
-    ProjectExplorer::ToolChain *tc = ProjectExplorer::ToolChainKitInformation::toolChain(target()->kit(), ProjectExplorer::Constants::CXX_LANGUAGE_ID);
+    ProjectExplorer::ToolChain *tc = ProjectExplorer::ToolChainKitAspect::toolChain(target()->kit(), ProjectExplorer::Constants::CXX_LANGUAGE_ID);
     if (!tc)
         emit addTask(ProjectExplorer::Task::compilerMissingTask());
 
@@ -50,11 +50,11 @@ bool NinjaMakeStep::setupPP(ProjectExplorer::ProcessParameters &pp)
     }
 
     pp.setMacroExpander(bc->macroExpander());
-    pp.setWorkingDirectory(bc->buildDirectory().toString());
+    pp.setWorkingDirectory(bc->buildDirectory());
     Utils::Environment env = bc->environment();
     Utils::Environment::setupEnglishOutput(&env);
     pp.setEnvironment(env);
-    pp.setCommand(ninjaCommand());
+    pp.setCommand(Utils::FilePath::fromString(ninjaCommand()));
     pp.setArguments(allArguments());
     pp.resolveAll();
     return true;
