@@ -5,9 +5,9 @@
 #include <QStringList>
 #include <QDebug>
 
-#include "mesonprojectparser.h"
+#include "src/mesonbuildfileparser.h"
 
-using namespace xxxMeson;
+using namespace MesonProjectManager;
 
 const QString testfile_data_no_action=R"(
 project('rule_system', 'cpp')
@@ -41,12 +41,12 @@ dep_mosquittopp = meson.get_compiler('cpp').find_library('mosquittopp', required
 
 #ide:editable-filelist
 app_sources = [
-    'chai_wrapper.cpp',
-    'main.cpp',
-    'named_logger.cpp',
-    'restricted_chaiscript.cpp',
-    'rule_logic.cpp',
-    'things.cpp',
+  'chai_wrapper.cpp',
+  'main.cpp',
+  'named_logger.cpp',
+  'restricted_chaiscript.cpp',
+  'rule_logic.cpp',
+  'things.cpp',
 ]
 
 app_includes = include_directories('ChaiScript-6.0.0/include')
@@ -70,19 +70,19 @@ dep_mosquittopp = meson.get_compiler('cpp').find_library('mosquittopp', required
 
 #ide:editable-filelist
 app_sources = [
-    'chai_wrapper.cpp',
-    'main.cpp',
-    'named_logger.cpp',
-    'restricted_chaiscript.cpp',
-    'rule_logic.cpp',
-    'things.cpp',
+  'chai_wrapper.cpp',
+  'main.cpp',
+  'named_logger.cpp',
+  'restricted_chaiscript.cpp',
+  'rule_logic.cpp',
+  'things.cpp',
 ]
 
 #ide:editable-filelist
 other_sources = [
-    'bar.cpp',
-    'baz.cpp',
-    'foo.cpp',
+  'bar.cpp',
+  'baz.cpp',
+  'foo.cpp',
 ]
 
 app_includes = include_directories('ChaiScript-6.0.0/include')
@@ -111,7 +111,7 @@ TEST_CASE("Parser should work")
     SECTION("No Action")
     {
         write_file(dir.path(), testfile_data_no_action);
-        MesonBuildParser p(dir.path()+"/meson.build");
+        MesonBuildFileParser p(dir.path()+"/meson.build");
         p.parse();
         REQUIRE(p.regenerate().toStdString()==testfile_data_no_action.toStdString());
         REQUIRE(p.fileListNames()==QStringList{});
@@ -120,7 +120,7 @@ TEST_CASE("Parser should work")
     SECTION("Single file list")
     {
         write_file(dir.path(), testfile_data_single_file_list);
-        MesonBuildParser p(dir.path()+"/meson.build");
+        MesonBuildFileParser p(dir.path()+"/meson.build");
         p.parse();
         REQUIRE(p.regenerate().toStdString()==testfile_data_single_file_list.toStdString());
         REQUIRE(p.fileListNames()==QStringList{"app_sources"});
@@ -135,7 +135,7 @@ TEST_CASE("Parser should work")
     SECTION("Single file list")
     {
         write_file(dir.path(), testfile_data_multiple_file_lists);
-        MesonBuildParser p(dir.path()+"/meson.build");
+        MesonBuildFileParser p(dir.path()+"/meson.build");
         p.parse();
         REQUIRE(p.regenerate().toStdString()==testfile_data_multiple_file_lists.toStdString());
         REQUIRE(p.fileListNames()==QStringList({"app_sources", "other_sources"}));
