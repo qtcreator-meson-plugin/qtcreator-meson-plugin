@@ -9,11 +9,11 @@
 class MesonProjectImporterData
 {
 public:
-    Utils::FileName directory;
+    Utils::FilePath directory;
     QString mesonPath;
 };
 
-MesonProjectManager::MesonProjectImporter::MesonProjectImporter(const Utils::FileName &path) :
+MesonProjectManager::MesonProjectImporter::MesonProjectImporter(const Utils::FilePath &path) :
     ProjectExplorer::ProjectImporter(path)
 {
 }
@@ -23,14 +23,14 @@ QStringList MesonProjectManager::MesonProjectImporter::importCandidates()
     return {};
 }
 
-QList<void *> MesonProjectManager::MesonProjectImporter::examineDirectory(const Utils::FileName &importPath) const
+QList<void *> MesonProjectManager::MesonProjectImporter::examineDirectory(const Utils::FilePath &importPath) const
 {
     QList<void *> result;
-    auto ninjaFile = Utils::FileName(importPath).pathAppended("build.ninja");
+    auto ninjaFile = Utils::FilePath(importPath).pathAppended("build.ninja");
     if (!ninjaFile.exists())
         return result;
 
-    if (!Utils::FileName(importPath).pathAppended("meson-private").exists())
+    if (!Utils::FilePath(importPath).pathAppended("meson-private").exists())
         return result;
 
     auto data = std::make_unique<MesonProjectImporterData>();
@@ -79,7 +79,7 @@ const QList<ProjectExplorer::BuildInfo> MesonProjectManager::MesonProjectImporte
 
     ProjectExplorer::BuildInfo info(factory);
     info.buildType = ProjectExplorer::BuildConfiguration::Unknown;
-    info.displayName = data->directory.fileName(1);
+    info.displayName = data->directory.fileNameWithPathComponents(1);
     info.kitId = k->id();
     info.buildDirectory = data->directory;
     QVariantMap extraParams;

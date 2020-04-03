@@ -13,7 +13,7 @@
 namespace MesonProjectManager {
 
 
-MesonTargetNode::MesonTargetNode(MesonProject *project, const Utils::FileName &filename, const QVector<EditableList> &editableLists, const TargetInfo &target, const QString &buildDir) :
+MesonTargetNode::MesonTargetNode(MesonProject *project, const Utils::FilePath &filename, const QVector<EditableList> &editableLists, const TargetInfo &target, const QString &buildDir) :
     ProjectExplorer::VirtualFolderNode(filename.parentDir())
 {
     setPriority(Priorities::Target);
@@ -47,7 +47,7 @@ void MesonTargetNode::addGeneratedAndUngroupedFilesNodes(const TargetInfo &targe
 {
     QStringList generatedExtraFiles;
 
-    auto ungroupedFilesNode = std::make_unique<ProjectExplorer::VirtualFolderNode>(Utils::FileName::fromString(target.definedIn.chopped(12)));
+    auto ungroupedFilesNode = std::make_unique<ProjectExplorer::VirtualFolderNode>(Utils::FilePath::fromString(target.definedIn.chopped(12)));
     ungroupedFilesNode->setPriority(Priorities::ExtraFiles);
     if(target.editableLists.size()>0) {
         ungroupedFilesNode->setDisplayName("Other Sources");
@@ -64,12 +64,12 @@ void MesonTargetNode::addGeneratedAndUngroupedFilesNodes(const TargetInfo &targe
             continue;
         }
 
-        ungroupedFilesNode->addNestedNode(std::make_unique<ProjectExplorer::FileNode>(Utils::FileName::fromString(fname),
+        ungroupedFilesNode->addNestedNode(std::make_unique<ProjectExplorer::FileNode>(Utils::FilePath::fromString(fname),
                                                                         ProjectExplorer::FileType::Source));
         ungroupedFilesNode->setIsGenerated(false);
         const QStringList headers = getAllHeadersFor(fname);
         for (const QString &header: headers) {
-            ungroupedFilesNode->addNestedNode(std::make_unique<ProjectExplorer::FileNode>(Utils::FileName::fromString(header),
+            ungroupedFilesNode->addNestedNode(std::make_unique<ProjectExplorer::FileNode>(Utils::FilePath::fromString(header),
                                                                             ProjectExplorer::FileType::Header));
             ungroupedFilesNode->setIsGenerated(false);
         }
@@ -101,19 +101,19 @@ void MesonTargetNode::addGeneratedAndUngroupedFilesNodes(const TargetInfo &targe
         updateLongestPrefix(extraFile);
     }
 
-    const Utils::FileName baseDir = Utils::FileName::fromString(longestPrefix.join("/"));
+    const Utils::FilePath baseDir = Utils::FilePath::fromString(longestPrefix.join("/"));
     auto generatedFileNode = std::make_unique<ProjectExplorer::VirtualFolderNode>(baseDir);
     generatedFileNode->setPriority(Priorities::GeneratedFiles);
     generatedFileNode->setDisplayName("Generated Files");
 
     auto addGeneratedFile = [&generatedFileNode](const QString &file) {
-        auto node = std::make_unique<ProjectExplorer::FileNode>(Utils::FileName::fromString(file),
+        auto node = std::make_unique<ProjectExplorer::FileNode>(Utils::FilePath::fromString(file),
                                                                 ProjectExplorer::FileType::Source);
         node->setIsGenerated(true);
         generatedFileNode->addNestedNode(std::move(node));
         const QStringList headers = getAllHeadersFor(file);
         for (const QString &header: headers) {
-            auto node = std::make_unique<ProjectExplorer::FileNode>(Utils::FileName::fromString(header),
+            auto node = std::make_unique<ProjectExplorer::FileNode>(Utils::FilePath::fromString(header),
                                                                     ProjectExplorer::FileType::Header);
             node->setIsGenerated(true);
             generatedFileNode->addNestedNode(std::move(node));
@@ -140,7 +140,7 @@ bool MesonTargetNode::supportsAction(ProjectExplorer::ProjectAction action, cons
     return false;
 }
 
-MesonSubDirNode::MesonSubDirNode(const Utils::FileName &filename) :
+MesonSubDirNode::MesonSubDirNode(const Utils::FilePath &filename) :
     ProjectExplorer::FolderNode(filename.parentDir())
 {
     setPriority(Priorities::SubDir);
@@ -166,17 +166,17 @@ bool MesonRootProjectNode::supportsAction(ProjectExplorer::ProjectAction action,
 }
 
 
-SubProjectsNode::SubProjectsNode(const Utils::FileName &folderPath, const QString &displayName) :
+SubProjectsNode::SubProjectsNode(const Utils::FilePath &folderPath, const QString &displayName) :
     ProjectExplorer::FolderNode(folderPath)
 {
     setPriority(Priorities::Subproject);
     setDisplayName(displayName);
 }
 
-MesonSingleGroupTargetNode::MesonSingleGroupTargetNode(const Utils::FileName &folderPath, MesonProject *project, const EditableList &editableList, const TargetInfo &target, const QString &buildDir)
+MesonSingleGroupTargetNode::MesonSingleGroupTargetNode(const Utils::FilePath &folderPath, MesonProject *project, const EditableList &editableList, const TargetInfo &target, const QString &buildDir)
     : ProjectExplorer::VirtualFolderNode(folderPath),
       FileListNode(editableList.parser, &editableList.parser->fileList(editableList.name), folderPath, Priorities::Target, project),
-      MesonTargetNode(project, Utils::FileName(), {}, target, buildDir)
+      MesonTargetNode(project, Utils::FilePath(), {}, target, buildDir)
 {
     TreeBuilder::processEditableFileList(this, editableList);
     setPriority(Priorities::Target);

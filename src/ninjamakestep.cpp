@@ -54,9 +54,7 @@ bool NinjaMakeStep::setupPP(ProjectExplorer::ProcessParameters &pp)
     Utils::Environment env = bc->environment();
     Utils::Environment::setupEnglishOutput(&env);
     pp.setEnvironment(env);
-    pp.setCommand(Utils::FilePath::fromString(ninjaCommand()));
-    pp.setArguments(allArguments());
-    pp.resolveAll();
+    pp.setCommandLine({Utils::FilePath::fromString(ninjaCommand()), allArguments(), Utils::CommandLine::Raw});
     return true;
 }
 

@@ -13,7 +13,7 @@ public:
     explicit MesonBuildConfiguration(ProjectExplorer::Target *parent, const Core::Id &id);
 
 public:
-    void initialize(const ProjectExplorer::BuildInfo &info) override;
+    void initialize() override;
 
     ProjectExplorer::NamedWidget *createConfigWidget() override;
     BuildType buildType() const override;
@@ -44,9 +44,7 @@ class MesonBuildConfigurationFactory : public ProjectExplorer::BuildConfiguratio
 public:
     MesonBuildConfigurationFactory();
 
-    QList<ProjectExplorer::BuildInfo> availableBuilds(const ProjectExplorer::Target *parent) const override;
-    QList<ProjectExplorer::BuildInfo> availableSetups(const ProjectExplorer::Kit *k, const QString &projectPath) const override;
-
+    QList<ProjectExplorer::BuildInfo> availableBuilds( const ProjectExplorer::Kit *k, const Utils::FilePath &projectPath, bool forSetup) const override;
     ProjectExplorer::BuildInfo createBuildInfo(const ProjectExplorer::Kit *k, const QString &projectPath) const;
 
 private:

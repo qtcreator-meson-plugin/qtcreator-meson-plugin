@@ -13,11 +13,11 @@ class MesonProjectImporter: public ProjectExplorer::ProjectImporter
     Q_OBJECT
 
 public:
-    MesonProjectImporter(const Utils::FileName &path);
+    MesonProjectImporter(const Utils::FilePath &path);
     QStringList importCandidates() override;
 
 protected:
-    QList<void *> examineDirectory(const Utils::FileName &importPath) const override;
+    QList<void *> examineDirectory(const Utils::FilePath &importPath) const override;
     bool matchKit(void *data, const ProjectExplorer::Kit *k) const override;
     ProjectExplorer::Kit *createKit(void *directoryData) const override;
     const QList<ProjectExplorer::BuildInfo> buildInfoListForKit(const ProjectExplorer::Kit *k, void *directoryData) const override;
