@@ -47,12 +47,7 @@ NinjaMakeStepConfigWidget::NinjaMakeStepConfigWidget(NinjaMakeStep *makeStep): P
         if (static_cast<ProjectExplorer::BuildConfiguration *>(sender())->isActive())
             updateDetails();
     });
-    connect(makeStep->project(), &ProjectExplorer::Project::activeProjectConfigurationChanged,
-            this, [this](ProjectExplorer::ProjectConfiguration *pc) {
-        if (pc && pc->isActive())
-            updateDetails();
-    });
-
+    connect(makeStep->project(), &ProjectExplorer::Project::activeBuildConfigurationChanged, this, &NinjaMakeStepConfigWidget::updateDetails);
 }
 
 void NinjaMakeStepConfigWidget::updateDetails()

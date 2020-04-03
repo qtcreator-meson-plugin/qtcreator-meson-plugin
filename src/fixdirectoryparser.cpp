@@ -24,7 +24,7 @@ void FixDirectoryParser::taskAdded(const ProjectExplorer::Task &task, int linked
     QString filePath = task.file.toString();
 
     if (!filePath.isEmpty())
-        editable.file = Utils::FileName::fromUserInput(m_workingDirectory.absoluteFilePath(filePath));
+        editable.file = Utils::FilePath::fromUserInput(m_workingDirectory.absoluteFilePath(filePath));
 
     IOutputParser::taskAdded(editable, linkedLines, skipLines);
 }

@@ -4,7 +4,7 @@
 
 namespace MesonProjectManager {
 
-MesonFileSubFolderNode::MesonFileSubFolderNode(const Utils::FileName &filename) :
+MesonFileSubFolderNode::MesonFileSubFolderNode(const Utils::FilePath &filename) :
     ProjectExplorer::FolderNode(filename)
 {
 }
@@ -16,10 +16,10 @@ bool MesonFileSubFolderNode::addFiles(const QStringList &filePaths, QStringList 
     return ret->addFiles(filePaths, notAdded);
 }
 
-bool MesonFileSubFolderNode::removeFiles(const QStringList &filePaths, QStringList *notRemoved)
+ProjectExplorer::RemovedFilesFromProject MesonFileSubFolderNode::removeFiles(const QStringList &filePaths, QStringList *notRemoved)
 {
     ProjectExplorer::FolderNode *ret = getFileListNode();
-    if (!ret) return false;
+    if (!ret) return ProjectExplorer::RemovedFilesFromProject::Error;
     return ret->removeFiles(filePaths, notRemoved);
 }
 

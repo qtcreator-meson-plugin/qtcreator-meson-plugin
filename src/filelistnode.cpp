@@ -4,7 +4,7 @@
 
 namespace MesonProjectManager {
 
-FileListNode::FileListNode(std::shared_ptr<MesonBuildFileParser> parser, MesonBuildFileParser::ChunkInfo *chunk, const Utils::FileName &folderPath, int priority, MesonProject *project) :
+FileListNode::FileListNode(std::shared_ptr<MesonBuildFileParser> parser, MesonBuildFileParser::ChunkInfo *chunk, const Utils::FilePath &folderPath, int priority, MesonProject *project) :
     ProjectExplorer::VirtualFolderNode(folderPath), parser(parser), chunk(chunk), project(project)
 {
     setPriority(priority);
@@ -30,7 +30,7 @@ bool FileListNode::addFiles(const QStringList &filePaths, QStringList *notAdded)
     return true;
 }
 
-bool FileListNode::removeFiles(const QStringList &filePaths, QStringList *notRemoved)
+ProjectExplorer::RemovedFilesFromProject FileListNode::removeFiles(const QStringList &filePaths, QStringList *notRemoved)
 {
     for(const auto &fp: filePaths) {
         QString relative_fn = getRelativeFileName(fp);
@@ -39,7 +39,7 @@ bool FileListNode::removeFiles(const QStringList &filePaths, QStringList *notRem
 
     MesonProject::regenerateProjectFiles(parser.get());
     project->refresh();
-    return true;
+    return ProjectExplorer::RemovedFilesFromProject::Ok;
 }
 
 bool FileListNode::renameFile(const QString &filePath, const QString &newFilePath)
@@ -65,8 +65,8 @@ bool FileListNode::supportsAction(ProjectExplorer::ProjectAction action, const P
 
 QString FileListNode::getRelativeFileName(const QString &filePath)
 {
-    auto fn = Utils::FileName::fromString(filePath);
-    QString relative_fn = fn.relativeChildPath(Utils::FileName::fromString(parser->getProject_base())).toString();
+    auto fn = Utils::FilePath::fromString(filePath);
+    QString relative_fn = fn.relativeChildPath(Utils::FilePath::fromString(parser->getProject_base())).toString();
 
     return relative_fn;
 }

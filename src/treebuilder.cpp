@@ -20,7 +20,7 @@ void TreeBuilder::build(MesonRootProjectNode *root, const QString &buildDir)
     if(!_project.subprojects.isEmpty()) {
         ProjectExplorer::FolderNode *subprojectsNode = createSubProjectsNode(root);
         for(IntroSubProject &sub: _project.subprojects) {
-            auto subprojectNode = std::make_unique<ProjectExplorer::VirtualFolderNode>(Utils::FileName::fromString(sub.baseDir));
+            auto subprojectNode = std::make_unique<ProjectExplorer::VirtualFolderNode>(Utils::FilePath::fromString(sub.baseDir));
             subprojectNode->setPriority(0);
             subprojectNode->setDisplayName(sub.name);
             buildProject(subprojectNode.get(), sub, buildDir);
@@ -33,7 +33,7 @@ void TreeBuilder::addEditableFileLists(ProjectExplorer::FolderNode *node, MesonP
 {
     for(const auto &list: editableLists)
     {
-        auto listNode = std::make_unique<FileListNode>(list.parser, &list.parser->fileList(list.name), Utils::FileName::fromString(list.parser->getProject_base()), Priorities::EditableGroup, project);
+        auto listNode = std::make_unique<FileListNode>(list.parser, &list.parser->fileList(list.name), Utils::FilePath::fromString(list.parser->getProject_base()), Priorities::EditableGroup, project);
         listNode->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_ui.png"));
         listNode->setDisplayName(list.name);
         processEditableFileList(listNode.get(), list);
@@ -45,8 +45,8 @@ void TreeBuilder::processEditableFileList(ProjectExplorer::FolderNode *listNode,
 {
     const QStringList abs_file_paths = list.parser->fileListAbsolute(list.name);
     for(const auto &fname: abs_file_paths) {
-        listNode->addNestedNode(std::make_unique<ProjectExplorer::FileNode>(Utils::FileName::fromString(fname), ProjectExplorer::FileType::Source),
-        {}, [](const Utils::FileName &fn) {
+        listNode->addNestedNode(std::make_unique<ProjectExplorer::FileNode>(Utils::FilePath::fromString(fname), ProjectExplorer::FileType::Source),
+        {}, [](const Utils::FilePath &fn) {
             auto node = std::make_unique<MesonFileSubFolderNode>(fn);
             node->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_ui.png"));
             return node;
@@ -56,8 +56,8 @@ void TreeBuilder::processEditableFileList(ProjectExplorer::FolderNode *listNode,
         for(const QString &header: headers) {
             if(abs_file_paths.contains(header))
                 continue;
-            listNode->addNestedNode(std::make_unique<ProjectExplorer::FileNode>(Utils::FileName::fromString(header), ProjectExplorer::FileType::Header),
-            {}, [](const Utils::FileName &fn) {
+            listNode->addNestedNode(std::make_unique<ProjectExplorer::FileNode>(Utils::FilePath::fromString(header), ProjectExplorer::FileType::Header),
+            {}, [](const Utils::FilePath &fn) {
                 auto node = std::make_unique<MesonFileSubFolderNode>(fn);
                 node->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_ui.png"));
                 return node;
@@ -152,13 +152,13 @@ void TreeBuilder::addNestedNodes(ProjectExplorer::FolderNode *root, const QVecto
             }
 
             if (relativeFilename.endsWith("/meson.build")) { // This is a subdir
-                MesonSubDirNode *msn = createMesonSubDirNode(parentNode, parentRelativeFilename, Utils::FileName::fromString(absoluteFilename));
+                MesonSubDirNode *msn = createMesonSubDirNode(parentNode, parentRelativeFilename, Utils::FilePath::fromString(absoluteFilename));
                 createdNodes[relativeFilename.mid(0, relativeFilename.size() - 12)] = msn; // Remove /meson.build suffix
                 parentNode = msn;
             }
-            setupMesonFileNode(parentNode, Utils::FileName::fromString(absoluteFilename), localEditableLists);
+            setupMesonFileNode(parentNode, Utils::FilePath::fromString(absoluteFilename), localEditableLists);
         } else {
-            createOtherBuildsystemFileNode(parentNode, Utils::FileName::fromString(absoluteFilename));
+            createOtherBuildsystemFileNode(parentNode, Utils::FilePath::fromString(absoluteFilename));
         }
 
         for (const TargetInfo &target: project.targets) {
@@ -174,30 +174,26 @@ void TreeBuilder::addNestedNodes(ProjectExplorer::FolderNode *root, const QVecto
             }
 
             if(target.editableLists.size()==1 && !anyUngroupedFiles) {
-                parentNode->addNode(std::make_unique<MesonSingleGroupTargetNode>(Utils::FileName::fromString(absoluteFilename).parentDir(), mesonProject, target.editableLists.first(), target, buildDir));
+                parentNode->addNode(std::make_unique<MesonSingleGroupTargetNode>(Utils::FilePath::fromString(absoluteFilename).parentDir(), mesonProject, target.editableLists.first(), target, buildDir));
             } else  {
-                parentNode->addNode(std::make_unique<MesonTargetNode>(mesonProject, Utils::FileName::fromString(absoluteFilename), target.editableLists, target, buildDir));
+                parentNode->addNode(std::make_unique<MesonTargetNode>(mesonProject, Utils::FilePath::fromString(absoluteFilename), target.editableLists, target, buildDir));
             }
         }
     }
 }
 
-void TreeBuilder::setupMesonFileNode(ProjectExplorer::FolderNode *node, Utils::FileName absoluteFileName, const QVector<EditableList> &editableLists)
+void TreeBuilder::setupMesonFileNode(ProjectExplorer::FolderNode *node, Utils::FilePath absoluteFileName, const QVector<EditableList> &editableLists)
 {
     addEditableFileLists(node, mesonProject, editableLists);
 
     // Populate path resolver lookup table for original directory names (to deal with structures reachable via dirs and symlinks at the same time)
     mesonProject->pathResolver.getForPath(QFileInfo(absoluteFileName.toString()).absolutePath());
 
-    auto meson_build = std::make_unique<ProjectExplorer::ProjectDocument>(MesonProjectManager::PROJECT_MIMETYPE, absoluteFileName, [this] {
-        mesonProject->refresh();
-    });
-
     node->addNode(std::make_unique<ProjectExplorer::FileNode>(absoluteFileName, ProjectExplorer::FileType::Project));
 
 }
 
-MesonSubDirNode *TreeBuilder::createMesonSubDirNode(ProjectExplorer::FolderNode *parentNode, QString parentRelativeName, Utils::FileName absoluteFileName)
+MesonSubDirNode *TreeBuilder::createMesonSubDirNode(ProjectExplorer::FolderNode *parentNode, QString parentRelativeName, Utils::FilePath absoluteFileName)
 {
     const QString displayName = parentRelativeName.mid(0, parentRelativeName.size() - 12); // Remove /meson.build suffix
     auto msn = std::make_unique<MesonSubDirNode>(absoluteFileName);
@@ -207,10 +203,10 @@ MesonSubDirNode *TreeBuilder::createMesonSubDirNode(ProjectExplorer::FolderNode 
     return out;
 }
 
-void TreeBuilder::createOtherBuildsystemFileNode(ProjectExplorer::FolderNode *parentNode, Utils::FileName absoluteFilename)
+void TreeBuilder::createOtherBuildsystemFileNode(ProjectExplorer::FolderNode *parentNode, Utils::FilePath absoluteFilename)
 {
     parentNode->addNestedNode(std::make_unique<ProjectExplorer::FileNode>(absoluteFilename, ProjectExplorer::FileType::Project),
-    {}, [](const Utils::FileName &fn) {
+    {}, [](const Utils::FilePath &fn) {
         auto node = std::make_unique<ProjectExplorer::FolderNode>(fn);
         //node->setIcon(Core::FileIconProvider::directoryIcon(":/projectexplorer/images/fileoverlay_ui.png"));
         return node;
@@ -219,7 +215,7 @@ void TreeBuilder::createOtherBuildsystemFileNode(ProjectExplorer::FolderNode *pa
 
 ProjectExplorer::FolderNode *TreeBuilder::createSubProjectsNode(ProjectExplorer::FolderNode *parentNode)
 {
-    Utils::FileName fnSubprojects = Utils::FileName::fromString(_project.baseDir+"/"+_project.subprojectsDir);
+    Utils::FilePath fnSubprojects = Utils::FilePath::fromString(_project.baseDir+"/"+_project.subprojectsDir);
     ProjectExplorer::FolderNode *subprojects = new SubProjectsNode(fnSubprojects, "subprojects");
     subprojects->setIcon(Core::FileIconProvider::directoryIcon(":/mesonprojectmanager/images/ui_overlay_meson.png"));
     parentNode->addNode(std::unique_ptr<ProjectExplorer::FolderNode>(subprojects));

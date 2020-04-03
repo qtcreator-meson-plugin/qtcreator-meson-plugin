@@ -171,7 +171,7 @@ bool MesonProjectWizard::postGenerateFiles(const QWizard *w, const Core::Generat
 {
     Q_UNUSED(w);
 
-    const Utils::FileName mesonBin = MesonProject::findDefaultMesonExecutable();
+    const Utils::FilePath mesonBin = MesonProject::findDefaultMesonExecutable();
     if(mesonBin.isEmpty())
         return false;
 
@@ -184,7 +184,7 @@ bool MesonProjectWizard::postGenerateFiles(const QWizard *w, const Core::Generat
 
     Utils::SynchronousProcess proc;
     proc.setWorkingDirectory(dir.absolutePath());
-    auto response = proc.run(mesonBin.toString(), {"_build"});
+    auto response = proc.run(Utils::CommandLine{mesonBin.toString(), {"_build"}});
     if (response.exitCode!=0) {
         ProjectExplorer::TaskHub::addTask(ProjectExplorer::Task::Error,
                                           QStringLiteral("Can't create build directory. rc=%1").arg(QString::number(response.exitCode)),
@@ -193,13 +193,13 @@ bool MesonProjectWizard::postGenerateFiles(const QWizard *w, const Core::Generat
     }
 
     {
-        MesonProject proj(Utils::FileName::fromString(l.first().path()));
+        MesonProject proj(Utils::FilePath::fromString(l.first().path()));
         ProjectExplorer::Kit *kit = ProjectExplorer::KitManager::instance()->defaultKit();
-        std::unique_ptr<ProjectExplorer::Target> target = proj.createTarget(kit);
+        std::unique_ptr<ProjectExplorer::Target> target{proj.addTargetForKit(kit)};
         MesonBuildConfigurationFactory factory;
 
         ProjectExplorer::BuildInfo buildInfo(&factory);
-        buildInfo.buildDirectory = Utils::FileName::fromString(dir.absoluteFilePath("_build"));
+        buildInfo.buildDirectory = Utils::FilePath::fromString(dir.absoluteFilePath("_build"));
         buildInfo.displayName = "Default";
         buildInfo.kitId = kit->id();
         buildInfo.typeName = buildInfo.displayName;
@@ -210,7 +210,6 @@ bool MesonProjectWizard::postGenerateFiles(const QWizard *w, const Core::Generat
         ProjectExplorer::BuildConfiguration *cfg = factory.create(target.get(), buildInfo);
         target->addBuildConfiguration(cfg);
 
-        proj.addTarget(move(target));
         proj.saveSettings();
     }
 

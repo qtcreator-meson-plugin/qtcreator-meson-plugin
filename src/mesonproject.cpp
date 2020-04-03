@@ -14,9 +14,7 @@
 #include <cpptools/cpptoolsconstants.h>
 #include <cpptools/cppmodelmanager.h>
 #include <cpptools/projectinfo.h>
-#include <cpptools/cpprawprojectpart.h>
 #include <cpptools/cppprojectupdater.h>
-#include <cpptools/cppkitinfo.h>
 
 #include <projectexplorer/projectimporter.h>
 #include <projectexplorer/buildinfo.h>
@@ -63,14 +61,15 @@ bool CompileCommandInfo::operator==(const CompileCommandInfo &o) const
             == std::tie(o.defines, o.includes, o.cpp_std, id, o.simplifiedCompilerParameters);
 }
 
-MesonProject::MesonProject(const Utils::FileName &filename):
+MesonProject::MesonProject(const Utils::FilePath &filename):
     Project(PROJECT_MIMETYPE, filename), filename(filename), cppCodeModelUpdater(new CppTools::CppProjectUpdater())
 {
     setId(MESONPROJECT_ID);
     setProjectLanguages(Core::Context(ProjectExplorer::Constants::CXX_LANGUAGE_ID));
-    setDisplayName(this->filename.fileName(1).section("/", 0, 0));
+    setDisplayName(this->filename.fileNameWithPathComponents(1).section("/", 0, 0));
 
     connect(this, &ProjectExplorer::Project::activeTargetChanged, this, &MesonProject::refresh);
+    connect(this, &MesonProject::projectFileIsDirty, this, &MesonProject::refresh);
 
     refresh();
 }
@@ -101,7 +100,7 @@ void MesonProject::refresh()
         // file change handling is racy and actually calls refresh even on expected changes :/
         return;
     }
-    emitParsingStarted();
+    refreshGuard = guardParsingRun();
 
     MesonBuildConfiguration *cfg = activeBuildConfiguration();
 
@@ -109,13 +108,10 @@ void MesonProject::refresh()
 
     IntroProject introProject = mesonIntrospectProjectInfoFromSource(cfg);
 
-    projectDocuments.clear();
+    QVector<Utils::FilePath> projectDocuments;
     for(const QString &name: introProject.buildsystemFiles) {
         const QString file = introProject.baseDir + "/" + name;
-
-        projectDocuments.emplace_back(std::make_unique<ProjectExplorer::ProjectDocument>(MesonProjectManager::PROJECT_MIMETYPE, filename, [this] {
-            refresh();
-        }));
+        projectDocuments.append(Utils::FilePath::fromString(file));
     }
 
     QString buildDir;
@@ -139,13 +135,12 @@ void MesonProject::refresh()
             p->targets.append(target);
         }
 
-        Utils::FileName buildDirFileName = cfg->buildDirectory();
+        Utils::FilePath buildDirFileName = cfg->buildDirectory();
         buildDir = buildDirFileName.toString();
 
-        projectDocuments.emplace_back(std::make_unique<ProjectExplorer::ProjectDocument>(MesonProjectManager::PROJECT_MIMETYPE, buildDirFileName.pathAppended("meson-info/intro-targets.json"), [this] {
-            refresh();
-        }));
+        projectDocuments.append(buildDirFileName.pathAppended("meson-info/intro-targets.json"));
     }
+    setExtraProjectFiles(projectDocuments);
 
     TreeBuilder builder(this, introProject);
     builder.build(root.get(), buildDir);
@@ -162,7 +157,8 @@ void MesonProject::refresh()
 
     refreshCppCodeModel(codeModelInfos);
 
-    emitParsingFinished(true);
+    refreshGuard.markAsSuccess();
+    refreshGuard = {};
 }
 
 IntroProject MesonProject::mesonIntrospectProjectInfoFromSource(const MesonBuildConfiguration *cfg)
@@ -177,7 +173,7 @@ IntroProject MesonProject::mesonIntrospectProjectInfoFromSource(const MesonBuild
 
     Utils::SynchronousProcess proc;
     proc.setTimeoutS(100);
-    auto response = proc.run(mesonPath, {"introspect", filename.toString(), "--projectinfo"});
+    auto response = proc.run(Utils::CommandLine{mesonPath, {"introspect", filename.toString(), "--projectinfo"}});
     if (response.exitCode!=0) {
         ProjectExplorer::TaskHub::addTask(ProjectExplorer::Task::Error,
                                           QStringLiteral("Can't introspect projectinfo. %1")
@@ -228,9 +224,9 @@ IntroProject MesonProject::mesonIntrospectProjectInfoFromSource(const MesonBuild
     return project;
 }
 
-Utils::FileName MesonProject::findDefaultMesonExecutable()
+Utils::FilePath MesonProject::findDefaultMesonExecutable()
 {
-    Utils::FileName mesonBin = Utils::Environment::systemEnvironment().searchInPath("meson.py");
+    Utils::FilePath mesonBin = Utils::Environment::systemEnvironment().searchInPath("meson.py");
     if (mesonBin.isEmpty()) {
         mesonBin = Utils::Environment::systemEnvironment().searchInPath("meson");
         if (mesonBin.isEmpty()) {
@@ -355,7 +351,7 @@ QVector<CompileCommandInfo> MesonProject::rewritePaths(const PathResolver::Direc
 
 QVector<TargetInfo> MesonProject::readMesonInfoTargets(const MesonBuildConfiguration &cfg)
 {
-    Utils::FileName mesonInfoTargetsFileName = cfg.buildDirectory().pathAppended("meson-info/intro-targets.json");
+    Utils::FilePath mesonInfoTargetsFileName = cfg.buildDirectory().pathAppended("meson-info/intro-targets.json");
     if (!mesonInfoTargetsFileName.exists()) {
         return {};
     }
@@ -423,7 +419,7 @@ bool MesonProject::needsConfiguration() const
     return false;
 }
 
-void MesonProject::configureAsExampleProject(const QSet<Core::Id> &platforms)
+void MesonProject::configureAsExampleProject()
 {
 
 }
@@ -449,12 +445,12 @@ void MesonProject::refreshCppCodeModel(const QVector<CompileCommandInfo> &fileCo
 
     cppCodeModelUpdater->cancel();
 
-    CppTools::ProjectPart::QtVersion activeQtVersion = CppTools::ProjectPart::Qt5;
+    Utils::QtVersion activeQtVersion = Utils::QtVersion::Qt5;
 
-    QVector<CppTools::RawProjectPart> parts;
+    QVector<ProjectExplorer::RawProjectPart> parts;
     int i=1;
     for (const CompileCommandInfo &info: fileCodeCompletionHints) {
-        CppTools::RawProjectPart rpp;
+        ProjectExplorer::RawProjectPart rpp;
         rpp.setDisplayName(info.id + QStringLiteral(" Part %1").arg(QString::number(i)));
         rpp.setProjectFileLocation(projectFilePath().toString());
         rpp.setQtVersion(activeQtVersion);
@@ -463,7 +459,7 @@ void MesonProject::refreshCppCodeModel(const QVector<CompileCommandInfo> &fileCo
         for (const auto &key: info.defines.keys())
             macros.append(ProjectExplorer::Macro(key.toUtf8(), info.defines[key].toUtf8()));
         rpp.setMacros(macros);
-        CppTools::RawProjectPartFlags rppf{cxxToolChain, info.simplifiedCompilerParameters};
+        ProjectExplorer::RawProjectPartFlags rppf{cxxToolChain, info.simplifiedCompilerParameters};
         rpp.setFlagsForCxx(rppf);
         rpp.setFlagsForC(rppf);
         rpp.setFiles(info.files);
@@ -472,11 +468,12 @@ void MesonProject::refreshCppCodeModel(const QVector<CompileCommandInfo> &fileCo
         i++;
     }
 
-    CppTools::KitInfo kitInfo(this);
+    ProjectExplorer::KitInfo kitInfo(this);
     kitInfo.cToolChain = cToolChain;
     kitInfo.cxxToolChain = cxxToolChain;
 
-    const CppTools::ProjectUpdateInfo projectInfoUpdate(this, kitInfo, parts);
+    const ProjectExplorer::ProjectUpdateInfo projectInfoUpdate(this, kitInfo, Utils::Environment::systemEnvironment(), parts);
+
     cppCodeModelUpdater->update(projectInfoUpdate);
 }
 
@@ -494,10 +491,11 @@ void MesonProject::editOptions()
         return;
     }
     MesonBuildConfiguration &cfg = *cfg_ptr;
-    const Utils::FileName buildDir = cfg.buildDirectory();
-    const bool buildConfigured = Utils::FileName(buildDir).pathAppended("meson-private").pathAppended("coredata.dat").exists();
+    const Utils::FilePath buildDir = cfg.buildDirectory();
+    const bool buildConfigured = Utils::FilePath(buildDir).pathAppended("meson-private").pathAppended("coredata.dat").exists();
     const QString pathArg = buildConfigured ? buildDir.toString() : filename.toString();
-    auto response = proc.run(cfg.mesonPath(), {"introspect", "--buildoptions", pathArg});
+    auto response = proc.run(Utils::CommandLine{cfg.mesonPath(), {"introspect", "--buildoptions", pathArg}});
+
     if (response.exitCode!=0) {
         QMessageBox::warning(nullptr, tr("Can't get buildoptions"), response.exitMessage(cfg.mesonPath(), proc.timeoutS())+"\n"+response.stdOut()+"\n\n"+response.stdErr());
         return;
@@ -544,7 +542,7 @@ void MesonProject::editOptions()
 
         Utils::SynchronousProcess proc;
         proc.setTimeoutS(100);
-        auto response = proc.run(cfg.mesonPath(), args);
+        auto response = proc.run(Utils::CommandLine{cfg.mesonPath(), args});
         if (response.exitCode!=0) {
             QMessageBox::warning(nullptr, tr("Can't configure meson build"), args.join("<->")+"\n\n"+response.exitMessage(cfg.mesonPath(), proc.timeoutS())+"\n"+response.stdOut()+"\n\n"+response.stdErr());
             return;

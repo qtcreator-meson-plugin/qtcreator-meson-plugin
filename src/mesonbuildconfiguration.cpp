@@ -28,9 +28,9 @@ MesonBuildConfiguration::MesonBuildConfiguration(ProjectExplorer::Target *parent
 {
 }
 
-void MesonBuildConfiguration::initialize(const ProjectExplorer::BuildInfo &info)
+void MesonBuildConfiguration::initialize()
 {
-    BuildConfiguration::initialize(info);
+    BuildConfiguration::initialize();
 
     ProjectExplorer::BuildStepList *buildSteps = stepList(ProjectExplorer::Constants::BUILDSTEPS_BUILD);
     buildSteps->appendStep(new NinjaMakeStep(buildSteps, "all"));
@@ -38,7 +38,7 @@ void MesonBuildConfiguration::initialize(const ProjectExplorer::BuildInfo &info)
     ProjectExplorer::BuildStepList *cleanSteps = stepList(ProjectExplorer::Constants::BUILDSTEPS_CLEAN);
     cleanSteps->appendStep(new NinjaMakeStep(cleanSteps, "clean"));
 
-    QVariantMap extraParams = info.extraInfo.toMap();
+    QVariantMap extraParams = extraInfo().toMap();
     setMesonPath(extraParams.value(MESON_BI_MESON_PATH).toString());
 
     updateCacheAndEmitEnvironmentChanged();
@@ -98,7 +98,7 @@ ProjectExplorer::BuildInfo MesonBuildConfigurationFactory::createBuildInfo(const
     QString suffix = tr("Debug", "Shadow build directory suffix");
 
     info.typeName = info.displayName;
-    info.buildDirectory = Utils::FileName::fromString(QFileInfo(projectPath).absolutePath()).pathAppended("_build");
+    info.buildDirectory = Utils::FilePath::fromString(QFileInfo(projectPath).absolutePath()).pathAppended("_build");
     info.kitId = k->id();
     QVariantMap extraParams;
     extraParams.insert(MESON_BI_MESON_PATH, MesonProject::findDefaultMesonExecutable().toString());
@@ -111,31 +111,21 @@ bool MesonBuildConfigurationFactory::correctProject(const ProjectExplorer::Targe
     return qobject_cast<MesonProject*>(parent->project());
 }
 
-QList<ProjectExplorer::BuildInfo> MesonBuildConfigurationFactory::availableBuilds(const ProjectExplorer::Target *parent) const
+QList<ProjectExplorer::BuildInfo> MesonBuildConfigurationFactory::availableBuilds(const ProjectExplorer::Kit *k, const Utils::FilePath &projectPath, bool forSetup) const
 {
     QList<ProjectExplorer::BuildInfo> result;
 
     // These are the options in the add menu of the build settings page.
 
-    const QString projectFilePath = parent->project()->projectFilePath().toString();
-
-    ProjectExplorer::BuildInfo info = createBuildInfo(parent->kit(), projectFilePath);
-    info.displayName.clear(); // ask for a name
-    info.buildDirectory.clear(); // This depends on the displayName
-    result << info;
-    return result;
-}
-
-QList<ProjectExplorer::BuildInfo> MesonBuildConfigurationFactory::availableSetups(const ProjectExplorer::Kit *k, const QString &projectPath) const
-{
-    // Used in initial setup. Returning nothing breaks easy import in setup dialog.
-
-    //qDebug()<<__PRETTY_FUNCTION__<<" TODO";
-    QList<ProjectExplorer::BuildInfo> result;
-    ProjectExplorer::BuildInfo info = createBuildInfo(k, projectPath);
-    //: The name of the build configuration created by default for a generic project.
-    info.displayName = tr("Default");
-    result.append(info);
+    ProjectExplorer::BuildInfo info = createBuildInfo(k, projectPath.toString());
+    if (forSetup) {
+        info.displayName = tr("Default");
+        result.append(info);
+    } else {
+        info.displayName.clear();     // ask for a name
+        info.buildDirectory.clear();  // This depends on the displayName
+        result << info;
+    }
     return result;
 }
 
@@ -158,7 +148,7 @@ MesonBuildConfigationWidget::MesonBuildConfigationWidget(MesonBuildConfiguration
     build_dir->setPath(config->buildDirectory().toString());
     layout->addRow(new QLabel(tr("Build Directory")), build_dir);
     connect(build_dir, &Utils::PathChooser::pathChanged, [config](QString path) {
-        config->setBuildDirectory(Utils::FileName::fromString(path));
+        config->setBuildDirectory(Utils::FilePath::fromString(path));
     });
 
 }

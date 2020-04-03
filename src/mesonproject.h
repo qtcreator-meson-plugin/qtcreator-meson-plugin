@@ -86,13 +86,13 @@ class MesonProject : public ProjectExplorer::Project
     Q_OBJECT
 
 public:
-    explicit MesonProject(const Utils::FileName &proFile);
+    explicit MesonProject(const Utils::FilePath &proFile);
     ~MesonProject() override;
 
     bool setupTarget(ProjectExplorer::Target *t) override;
     QStringList filesGeneratedFrom(const QString &sourceFile) const override;
     bool needsConfiguration() const override;
-    void configureAsExampleProject(const QSet<Core::Id> &platforms) override;
+    void configureAsExampleProject() override;
     //bool requiresTargetPanel() const override;
     ProjectExplorer::ProjectImporter *projectImporter() const override;
 
@@ -108,15 +108,15 @@ public:
 
     PathResolver pathResolver;
 
-    static Utils::FileName findDefaultMesonExecutable();
+    static Utils::FilePath findDefaultMesonExecutable();
     static void regenerateProjectFiles(MesonBuildFileParser *parser);
 
 private:
     static QStringList jsonArrayToStringList(const QJsonArray arr);
     MesonBuildConfiguration *activeBuildConfiguration();
-    const Utils::FileName filename;
+    const Utils::FilePath filename;
     CppTools::CppProjectUpdater *cppCodeModelUpdater = nullptr;
-    std::vector<std::unique_ptr<ProjectExplorer::ProjectDocument>> projectDocuments;
+    ParseGuard refreshGuard;
 
 protected:
     RestoreResult fromMap(const QVariantMap &map, QString *errorMessage) override;

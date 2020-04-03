@@ -13,7 +13,7 @@ struct TargetInfo;
 class MesonTargetNode: public virtual ProjectExplorer::VirtualFolderNode
 {
 public:
-    MesonTargetNode(MesonProject *project, const Utils::FileName &filename, const QVector<EditableList> &editableLists, const TargetInfo &target, const QString &buildDir);
+    MesonTargetNode(MesonProject *project, const Utils::FilePath &filename, const QVector<EditableList> &editableLists, const TargetInfo &target, const QString &buildDir);
     void addGeneratedAndUngroupedFilesNodes(const TargetInfo &target, const QString &buildDir);
 
     bool supportsAction(ProjectExplorer::ProjectAction action, const ProjectExplorer::Node *node) const override;
@@ -22,14 +22,14 @@ public:
 class MesonSingleGroupTargetNode: public FileListNode, public MesonTargetNode
 {
 public:
-    MesonSingleGroupTargetNode(const Utils::FileName &folderPath, MesonProjectManager::MesonProject *project, const EditableList &editableList, const TargetInfo &target, const QString &buildDir);
+    MesonSingleGroupTargetNode(const Utils::FilePath &folderPath, MesonProjectManager::MesonProject *project, const EditableList &editableList, const TargetInfo &target, const QString &buildDir);
     bool supportsAction(ProjectExplorer::ProjectAction action, const ProjectExplorer::Node *node) const override;
 };
 
 class MesonSubDirNode: public ProjectExplorer::FolderNode
 {
 public:
-    MesonSubDirNode(const Utils::FileName &filename);
+    MesonSubDirNode(const Utils::FilePath &filename);
 
     bool supportsAction(ProjectExplorer::ProjectAction action, const ProjectExplorer::Node *node) const override;
 };
@@ -44,7 +44,7 @@ public:
 class SubProjectsNode : public ProjectExplorer::FolderNode
 {
 public:
-    explicit SubProjectsNode(const Utils::FileName &folderPath, const QString &displayName = QString());
+    explicit SubProjectsNode(const Utils::FilePath &folderPath, const QString &displayName = QString());
 };
 
 
